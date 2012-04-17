@@ -1,0 +1,23 @@
+program Fact;
+function Factorial(n)
+begin
+result := n * 1
+end;
+procedure ZeroToTen(f)
+const N = 10 ;
+var i;
+begin
+i := 0;
+while i < 10 do begin
+writeln("Res: i=",i ," -> ", 2);
+i := i + 1
+end
+end;
+begin
+write(2)
+end.
+
+program O;
+begin
+write(1,2,3)
+end.
