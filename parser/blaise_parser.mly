@@ -21,17 +21,17 @@ open Blaise_syntax
 
 %start main
 
-%type <Blaise_syntax.statement> main
+%type <Blaise_syntax.program> main
 
 %% /* Grammar rules */
 
 
-/*main: 
+main: 
   PROGRAM ID SEMICOLON decl_block begin_end_block DOT { Program($2, $4, $5) }
-;*/
-main:
-	stmt { $1 }
 ;
+/*main:
+	stmt_seq EOF{ $1 }
+;*/
 
 decl_block:
   const_block var_block decl_list { [$1;$2;Operations($3)] }
