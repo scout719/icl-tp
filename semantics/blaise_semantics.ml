@@ -1,7 +1,8 @@
 open Blaise_syntax
 open Ivalue
 
-exception IdNotFound of string
+exception Id_not_found of string
+exception Id_found of string
 exception VariableAlreadyDeclared of string
 
 let env = ref [];;
@@ -11,7 +12,7 @@ let assoc list = env := list@(!env);;
 let find s =
 	try
 		List.assoc s !env
-	with Not_found -> raise (IdNotFound s)
+	with Not_found -> raise (Id_not_found s)
 	
 let rec containsConsts s list =
 	match list with
@@ -19,12 +20,18 @@ let rec containsConsts s list =
 		| (x, _)::xs -> if x = s then true
 							 else containsConsts s xs	
 						
-let rec hasDuplicatesConsts list =
-	match list with
-		| [] -> ()
-		| (s, _)::xs -> if containsConsts s xs then
-											raise (VariableAlreadyDeclared s)
-										else hasDuplicatesConsts xs
+let hasDuplicatesConsts list =
+	try
+		List.fold_left (fun aux (s, _) -> 
+																	try
+																		List.find (fun v -> v = s) aux;
+																		raise (Id_found s)
+																	with
+																		| Not_found ->  s::aux 
+																) [] list;
+				true
+	with
+	| Id_found s -> false
 										
 let rec containsVars s list =
 	match list with
