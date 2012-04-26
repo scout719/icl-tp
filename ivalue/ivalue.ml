@@ -1,9 +1,13 @@
 open Blaise_syntax
 
+module RecordMap = Map.Make (String)
+
 type ivalue =
 	| StringValue of string
 	| NumberValue of int
 	| BooleanValue of bool
+	| ArrayValue of ivalue array
+	| RecordValue of ivalue RecordMap.t
 	| RefValue of ivalue ref
 	| FunValue of (string list) * statement * ((string * ivalue) list)
 	| ProcValue of (string list) * statement * ((string * ivalue) list)

@@ -48,12 +48,12 @@ const_block:
 ;
 
 decl_id_list:
-  decl_id SEMICOLON { $1 }
-/*| decl_id SEMICOLON decl_id_list { [$1]::$3 }*/
+  decl_id SEMICOLON { [$1] }
+| decl_id SEMICOLON decl_id_list { $1::$3 }
 ;
 
 decl_id:
-	id_list { $1 }
+ id_list COLON type_decl {  }
 ;
 	
 id_list:
@@ -185,11 +185,11 @@ factor:
 | LPAR expr RPAR { $2 }
 | TRUE { Boolean(true) }
 | FALSE { Boolean(false) }
-/*| factor DOT ID {  }
-| factor LPAR expr_list_or_empty RPAR { }
-| factor LSBRA factor RSBRA { }
-| LSBRA expr_list_or_empty RSBRA { }
-| LCBRA rec_decl_id_list RCBRA { }*/
+| factor DOT ID { GetRecord($1, $3) }
+/*| factor LPAR expr_list_or_empty RPAR {  }*/
+| factor LSBRA factor RSBRA { GetArray($1, $3) }
+| LSBRA expr_list_or_empty RSBRA { Array($2) }
+| LCBRA rec_decl_id_list RCBRA { Record($2) }
 ;
 
 rec_decl_id_list:
@@ -201,17 +201,17 @@ rec_decl_id:
 	ID EQUAL expr { ($1, $3) }
 ;
 
-/*
+
 type_decl_list:
-| { }
-| type_decl { $1 }
-| type_decl COMMA type_decl_list { }
+| { [] }
+| type_decl { [$1] }
+| type_decl COMMA type_decl_list { $1::$3 }
 ;
 
 type_decl:
-  INTEGER { }
-| STRING { }
-| BOOL { }
+  INTEGER { TNumber }
+| STRING { TString }
+| BOOL { TBoolean }
 | func_type { $1 }
 | proc_type { $1 }
 | array_type { $1 }
@@ -219,28 +219,28 @@ type_decl:
 ;
 
 func_type:
-	FUN LPAR type_decl_list RPAR COLON type_decl { } 
+	FUN LPAR type_decl_list RPAR COLON type_decl { TFun($3, $6) } 
 ;
 
 proc_type:
-	PROC LPAR type_decl_list RPAR { }
+	PROC LPAR type_decl_list RPAR { TProc($3) }
 ;
 
 array_type:
-  ARRAY LPAR NUM COMMA type_decl RPAR { }
+  ARRAY LPAR NUM COMMA type_decl RPAR { TArray($3, $5) }
 ;
 
 rec_type:
-  REC LPAR rec_type_decl_id_list RPAR { }
+  REC LPAR rec_type_decl_id_list RPAR { TRecord($3) }
 ;
 
 rec_type_decl_id_list:
-	rec_type_decl_id { $1 }
-| rec_type_decl_id COMMA rec_type_decl_id_list { }
+	rec_type_decl_id { [$1] }
+| rec_type_decl_id COMMA rec_type_decl_id_list { $1::$3 }
 ;
 
 rec_type_decl_id:
-	ID COLON type_decl { }
-;*/
+	ID COLON type_decl { ($1, $3) }
+;
 
 %%
