@@ -18,6 +18,18 @@ write(2)
 end.
 
 program O;
+const x = 2;
+var y;
 begin
-write(1,2,3)
+y := 4;
+write(y)
 end.
+
+program O;
+const x = 2;
+var y;
+begin
+y := 4;
+write(x + y)
+end.
+

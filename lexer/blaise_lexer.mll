@@ -25,6 +25,7 @@ let  string_constant = '"' string_char* '"'
 rule token = parse
 	| [' ' '\t' '\r' '\n'] { token lexbuf }
 	| "program" { PROGRAM }
+	| ";;" { EOF }
 	| "function" { FUNCTION }
 	| "procedure" { PROCEDURE }
 	| "begin" { BEGIN }
