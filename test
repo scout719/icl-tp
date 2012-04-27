@@ -1,35 +1,73 @@
 program Fact;
-function Factorial(n)
+function Factorial(n:Integer):Integer
+var res:Integer;
 begin
-result := n * 1
+if (n = 0) then
+res := 1
+else
+res := n * Factorial(n-1);
+result := res
 end;
-procedure ZeroToTen(f)
-const N = 10 ;
-var i;
+procedure ZeroToTen(f:Fun(Integer):Integer)
+const N = 10 ; A = [0,1,2,3,4,5,6,7,8,9];
+var i:Integer;
 begin
 i := 0;
 while i < 10 do begin
-writeln("Res: i=",i ," -> ", 2);
+writeln("Res: i=",i ," -> ", f(A[i]));
 i := i + 1
 end
 end;
 begin
-write(2)
+ZeroToTen(Factorial)
+end.
+
+program Fact;
+function Factorial(n:Integer):Integer
+var res:Integer;
+begin
+if (n = 1) then
+begin
+res := 1
+end
+else
+begin
+res := n * Factorial(n-1)
+end;
+result := res
+end;
+begin
+write(Factorial(40))
 end.
 
 program O;
 const x = 2;
-var y;
+var y:Integer;
+procedure Lol(x:Integer, y:Integer)
+const z = 1;
+begin
+writeln(x+y+z)
+end;
 begin
 y := 4;
-write(y)
+Lol(x, y)
 end.
 
 program O;
 const x = 2;
-var y;
+var y:Integer;
+function Lol(x:Integer, z:Integer):Integer
+begin
+result := x+z
+end;
 begin
 y := 4;
-write(x + y)
+write(Lol(x,y))
 end.
 
+program Hello;
+begin
+writeln("Hello World!");
+write("Eu tenho ");
+writeln(2," amores. :P", false)
+end.

@@ -53,7 +53,7 @@ decl_id_list:
 ;
 
 decl_id:
- id_list COLON type_decl {  }
+ id_list COLON type_decl { ($3, $1) }
 ;
 	
 id_list:
@@ -81,7 +81,7 @@ decl:
 ;
 
 fun_decl:
-	FUNCTION ID LPAR param_list RPAR decl_block begin_end_block { Function($2, $4, $6, $7) }
+	FUNCTION ID LPAR param_list RPAR COLON type_decl decl_block begin_end_block { Function($2, $4, $8, $9, $7) }
 ;
 
 proc_decl:
@@ -95,7 +95,7 @@ param_list:
 ;
 
 param:
-  ID { $1 }
+  ID COLON type_decl { ($1, $3) }
 ;
 
 begin_end_block:
@@ -119,7 +119,7 @@ stmt:
 | IF expr THEN opt_begin_end_block %prec LOWER_THAN_ELSE { If( $2, $4 ) }
 | WRITE LPAR expr_list RPAR { Write( $3 ) }
 | WRITELN LPAR expr_list_or_empty RPAR { WriteLn( $3 ) }
-/*| factor LPAR expr_list_or_empty RPAR {  }*/
+| factor LPAR expr_list_or_empty RPAR { CallProc($1, $3) }
 | RESULT ASSIGN expr { Assign(Id("result"), $3 ) }
 | READ LPAR id_list RPAR { Read( $3 ) }
 | READLN LPAR id_list RPAR { ReadLn( $3 ) }
@@ -186,7 +186,7 @@ factor:
 | TRUE { Boolean(true) }
 | FALSE { Boolean(false) }
 | factor DOT ID { GetRecord($1, $3) }
-/*| factor LPAR expr_list_or_empty RPAR {  }*/
+| factor LPAR expr_list_or_empty RPAR { CallFun($1, $3) }
 | factor LSBRA factor RSBRA { GetArray($1, $3) }
 | LSBRA expr_list_or_empty RSBRA { Array($2) }
 | LCBRA rec_decl_id_list RCBRA { Record($2) }

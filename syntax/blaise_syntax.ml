@@ -31,6 +31,7 @@ type expr =
 	| Id of string
 	| GetArray of expr * expr
 	| GetRecord of expr * string
+	| CallFun of expr * (expr list)
 
 type statement =
 	| Assign of expr * expr
@@ -42,6 +43,7 @@ type statement =
 	| Read of string list
 	| ReadLn of string list
 	| Seq of statement * statement
+	| CallProc of expr * (expr list)
 
 type decl_block =
 	| Consts of (string * expr) list

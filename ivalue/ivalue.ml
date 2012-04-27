@@ -2,17 +2,27 @@ open Blaise_syntax
 
 module RecordMap = Map.Make (String)
 
-type ivalue =
+type env = (string * ivalue) list
+
+and ivalue =
 	| StringValue of string
 	| NumberValue of int
 	| BooleanValue of bool
 	| ArrayValue of ivalue array
 	| RecordValue of ivalue RecordMap.t
 	| RefValue of ivalue ref
-	| FunValue of (string list) * statement * ((string * ivalue) list)
-	| ProcValue of (string list) * statement * ((string * ivalue) list)
-	| Uninitialized
+	| FunValue of ((string * iType) list) * statement * iType * env
+	| ProcValue of ((string * iType) list) * statement * env
 	| None
+
+let rec defaultValue t =
+	match t with
+	| TNumber -> NumberValue(0)
+	| TString -> StringValue("")
+	| TBoolean -> BooleanValue(false)
+	| TArray (size, t1) -> ArrayValue( Array.make size (defaultValue t1))
+	| TRecord (list) -> let map = List.fold_left (fun prev (s, t1) -> RecordMap.add s (defaultValue t1) prev) RecordMap.empty list in
+												RecordValue(map)
 
 let rec sum_ivalue e1 e2 =
 	match e1, e2 with
@@ -92,11 +102,23 @@ let rec and_ivalue e1 e2 =
 		| BooleanValue(b1), BooleanValue(b2) -> BooleanValue(b1 && b2)
 		| _ -> None
 
+let rec get_record_ivalue v s = 
+	match v with
+		| RecordValue(map) -> RecordMap.find s map
+		| RefValue(r) -> get_record_ivalue !r s
+		| _ -> None
+
+let rec get_array_ivalue array index =
+	match array, index with
+		| RefValue(r), _ -> get_array_ivalue !r index
+		| _, RefValue(r) -> get_array_ivalue array !r
+		| ArrayValue(array), NumberValue(n) -> Array.get array n
+		| _ -> None
+
 let rec string_of_ivalue e =
 	match e with
 		| NumberValue n -> string_of_int n
 		| BooleanValue b -> string_of_bool b
 		| StringValue s -> s
 		| RefValue r -> string_of_ivalue !r
-		| Uninitialized -> "Uninitialized" 
 		| None -> "None"

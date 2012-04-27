@@ -81,5 +81,5 @@ rule token = parse
 	| string_constant as string { 
       let s = String.sub string 1 (String.length string - 2) in
       STRING_CONST s }
-	| _ { token lexbuf }
 	| eof { EOF }
+	| _ { token lexbuf }
