@@ -19,6 +19,8 @@ open Blaise_syntax
 %left LOWER_THAN_ELSE
 %left ELSE
 
+%token QUIT
+
 %start main
 
 %type <Blaise_syntax.program> main
@@ -28,6 +30,7 @@ open Blaise_syntax
 
 main: 
   PROGRAM ID SEMICOLON decl_block begin_end_block DOT { Program($2, $4, $5) }
+|	QUIT { exit(0) }
 ;
 /*main:
 	stmt_seq EOF{ $1 }

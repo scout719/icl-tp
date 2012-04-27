@@ -52,6 +52,7 @@ rule token = parse
 	| "Record" { REC }
 	| "Fun" { FUN }
 	| "Proc" { PROC }
+	| "!quit" { QUIT }
 	| ':' { COLON }
 	| '(' { LPAR }
 	| ')' { RPAR } 
