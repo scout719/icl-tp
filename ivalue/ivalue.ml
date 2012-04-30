@@ -84,13 +84,11 @@ let rec and_ivalue e1 e2 =
 let rec get_record_ivalue v s = 
 	match v with
 		| RecordValue(map) -> RecordMap.find s map
-		| RefValue(r) -> get_record_ivalue !r s
 		| _ -> None
 
 let rec get_array_ivalue array index =
 	match array, index with
 		| ArrayValue(array), NumberValue(n) -> Array.get array n
-		| RefValue(r), _ -> get_array_ivalue !r index
 		| _ -> None
 
 let rec string_of_ivalue e =
