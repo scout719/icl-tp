@@ -11,8 +11,8 @@ and ivalue =
 	| ArrayValue of ivalue array
 	| RecordValue of ivalue RecordMap.t
 	| RefValue of ivalue ref
-	| FunValue of ((string * iType) list) * statement * iType * env
-	| ProcValue of ((string * iType) list) * statement * env
+	| FunValue of ((string * iType) list) * (decl_block list) * statement * iType * env
+	| ProcValue of ((string * iType) list) * (decl_block list) * statement * env
 	| None
 
 let rec defaultValue t =

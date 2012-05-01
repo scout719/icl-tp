@@ -127,27 +127,27 @@ let rec evalExp env lvalue e =
 				| Not e -> not_ivalue (toresult' (evalExp' e))
 				| Id s -> toresult' (find s env)
 				| GetRecord (e, s) -> (try 
-																toresult' (get_record_ivalue (evalExp env false e) s)
+																toresult' (get_record_ivalue (evalExp' e) s)
 															with
 																| Not_found -> raise (Element_not_found_in_record s)
 															)
-				| GetArray (e1, e2) -> toresult' (get_array_ivalue (evalExp env false e1) (evalExp' e2))
-				| CallFun (e, list) -> let FunValue(listArgs, s, _, closure_env) = evalExp' e in
-																		let args_env = List.map2 (fun (s, _) e1 -> (s, evalExp' e1)) listArgs list in
-																			let new_env = closure_env@args_env@env in
-																				let result_env = evalState new_env s in
-																					find "result" result_env
+				| GetArray (e1, e2) -> toresult' (get_array_ivalue (evalExp' e1) (evalExp' e2))
+				| CallFun (e, list) -> let FunValue(listArgs, [consts;vars;opers], s, t, closure_env) = evalExp' e in
+																let args_env = List.map2 (fun (s, _) e1 -> (s, evalExp' e1)) listArgs list in
+																	let env_consts = evalDecls (args_env@closure_env) consts in
+																		let env_vars = evalDecls env_consts vars in
+																			let env_opers = evalDecls env_vars opers in
+																				let new_env = assoc "result" (RefValue(ref (defaultValue t))) (env_opers) in
+																					let result_env = evalState (new_env@env) s in
+																						find "result" result_env
 
 and evalState env s =
 	let evalState' = evalState env in
 		let evalExp' = evalExp env false in
 			match s with
-				| Assign (e1, e2) -> (match e1 with
-																| Id("result") -> assoc "result" (evalExp' e2) env
-																| _ -> let (RefValue(r), e2') = (evalExp env true e1, evalExp' e2) in
-																					r := e2';
-																					env
-															)
+				| Assign (e1, e2) -> let (RefValue(r), e2') = (evalExp env true e1, evalExp' e2) in
+															r := e2';
+															env
 				| While (e, s) -> let BooleanValue(b) = evalExp' e in
 														if b then (
 															let temp_env = evalState' s in
@@ -181,23 +181,18 @@ and evalState env s =
 				| ReadLn list -> let new_env = evalState' (Read list) in
 														readLine();
 														new_env 
-				| CallProc (e, list) -> let ProcValue(listArgs, s, closure_env) = evalExp' e in
+				| CallProc (e, list) -> let ProcValue(listArgs, [consts;vars;opers], s, closure_env) = evalExp' e in
 																	let args_env = List.map2 (fun (s, _) e1 -> (s, evalExp' e1)) listArgs list in
-																		let new_env = closure_env@args_env@env in
-																			evalState new_env s;
-																			env (* nao se retorna o env do proc para nao vir com as consts, vars, args e env do proc *)
+																		let env_consts = evalDecls (args_env@closure_env) consts in
+																			let env_vars = evalDecls env_consts vars in
+																				let env_opers = evalDecls env_vars opers in
+																						evalState (env_opers@env) s;
+																						env (* nao se retorna o env do proc para nao vir com as consts, vars, args e env do proc *)
 
-let rec evalOpers env o =
-	let evalDecls' = evalDecls env in
+and evalOpers env o =
 		match o with
-			| Function(name, listArgs, [consts; vars; opers], s, t) -> let env_consts = evalDecls' consts in
-																																		let env_vars = evalDecls' vars in
-																																			let env_opers = evalDecls' opers in
-																																				assoc name (FunValue(listArgs, s, t, env_opers@env_vars@env_consts@env)) env
-			| Procedure(name, listArgs, [consts; vars; opers], s) -> let env_consts = evalDecls' consts in
-																																		let env_vars = evalDecls' vars in
-																																			let env_opers = evalDecls' opers in
-																																				assoc name (ProcValue(listArgs, s, env_opers@env_vars@env_consts@env)) env
+			| Function(name, listArgs, decl, s, t) -> assoc name (FunValue(listArgs, decl, s, t, env)) env
+			| Procedure(name, listArgs, decl, s) -> assoc name (ProcValue(listArgs, decl, s, env)) env
 			| _ -> [] (* dummy *)
 			
 and evalDecls env d = (* ATENTION  verificar se as variaveis nao colidem com as constantes*)
@@ -212,7 +207,7 @@ and evalDecls env d = (* ATENTION  verificar se as variaveis nao colidem com as 
 			| Vars (list) -> let (new_env, allVars) = List.fold_left (fun (prev_env, prev_vars) (t, l) -> 
 																									let temp_env = List.fold_left (fun prev s -> assoc s (RefValue(ref (defaultValue t))) prev) prev_env l in
 																										(temp_env@prev_env, l@prev_vars)
-																					) ([], []) list in
+																					) (env, []) list in
 													hasDuplicatesVars allVars;
 														new_env
 			(* Percorrer todas as declaracoes de funcoes e procedimentos e avaliar cada declaracao e retornar o ambiente *)
