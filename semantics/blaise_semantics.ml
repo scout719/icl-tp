@@ -139,7 +139,7 @@ let rec evalExp env lvalue e =
 																			let env_opers = evalDecls env_vars opers in
 																				let new_env = assoc "result" (RefValue(ref (defaultValue t))) (env_opers) in
 																					let result_env = evalState (new_env@env) s in
-																						find "result" result_env
+																						toresult' (find "result" result_env)
 
 and evalState env s =
 	let evalState' = evalState env in

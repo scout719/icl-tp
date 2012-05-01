@@ -1,0 +1,34 @@
+program Fibonacci_Memoization;
+
+var n : Integer;
+		mem : Array(1024, Integer);
+
+function fib(n : Integer) : Integer\
+var n1, n2 : Integer;
+begin
+	if n = 0 or n = 1 then
+		result := mem[n]
+	else
+	begin
+		if mem[n-1] = -1 then
+			mem[n-1] := fib(n-1);
+		if mem[n-2] = -1 then
+			mem[n-2] := fib(n-2);
+		if mem[n] = -1 then
+			mem[n] := mem[n-1] + mem[n-2];
+		result := mem[n]
+	end
+end;
+
+begin
+	while n < 1024 do
+	begin
+		mem[n] := -1;
+		n := n + 1
+	end;
+	mem[0] := 0;
+	mem[1] := 1;
+	write("N? ");
+	readln(n);
+	writeln("Resultado = ", fib(n))
+end.

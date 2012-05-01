@@ -190,7 +190,7 @@ factor:
 | FALSE { Boolean(false) }
 | factor DOT ID { GetRecord($1, $3) }
 | factor LPAR expr_list_or_empty RPAR { CallFun($1, $3) }
-| factor LSBRA factor RSBRA { GetArray($1, $3) }
+| factor LSBRA expr RSBRA { GetArray($1, $3) }
 | LSBRA expr_list_or_empty RSBRA { Array($2) }
 | LCBRA rec_decl_id_list RCBRA { Record($2) }
 ;

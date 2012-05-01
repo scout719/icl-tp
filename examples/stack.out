@@ -1,0 +1,13 @@
+Stack Example...
+Numero de elementos: Stack vazia? true
+Digite elemento: Digite elemento: Digite elemento: Digite elemento: Digite elemento: Stack cheia? true
+Stack vazia? false
+Output do conteudo:
+e
+d
+c
+b
+a
+Stack cheia? false
+Stack vazia? true
+End...
