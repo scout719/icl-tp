@@ -2,7 +2,7 @@ open Blaise_syntax
 
 module RecordMap = Map.Make (String)
 
-type env = (string * ivalue) list
+type env = (string * (ivalue ref)) list
 
 and ivalue =
 	| StringValue of string
@@ -13,7 +13,7 @@ and ivalue =
 	| RefValue of ivalue ref
 	| FunValue of ((string * iType) list) * (decl_block list) * statement * iType * env
 	| ProcValue of ((string * iType) list) * (decl_block list) * statement * env
-	| None
+	| NoneValue
 
 let rec defaultValue t =
 	match t with
@@ -21,75 +21,83 @@ let rec defaultValue t =
 	| TString -> StringValue("")
 	| TBoolean -> BooleanValue(false)
 	| TArray (size, t1) -> ArrayValue( Array.init size (fun i -> RefValue(ref (defaultValue t1))))
-	| TRecord (list) -> let map = List.fold_left (fun prev (s, t1) -> RecordMap.add s (RefValue(ref (defaultValue t1))) prev) RecordMap.empty list in
+	| TRecord list -> let map = List.fold_left (fun prev (s, t1) -> RecordMap.add s (RefValue(ref (defaultValue t1))) prev) RecordMap.empty list in
 												RecordValue(map)
+(*	| TProc list -> let (args, _) = List.fold_left (fun (prev_list, i) t ->                      *)
+(*																								(prev_list@[("_"^(string_of_int i), t)], i + 1)*)
+(*																						) ([], 0) list in                                  *)
+(*										ProcValue(args, [], Dumb, [])                                              *)
+(*	| TFun (list, t) -> let (args, _) = List.fold_left (fun (prev_list, i) t ->                  *)
+(*																							(prev_list@[("_"^(string_of_int i), t)], i + 1)  *)
+(*																					) ([], 0) list in                                    *)
+(*									FunValue(args, [], Dumb, t, [])                                              *)
 
 let rec sum_ivalue e1 e2 =
 	match e1, e2 with
 		| NumberValue(n1), NumberValue(n2) -> NumberValue(n1 + n2)
 		| StringValue(s1), StringValue(s2) -> StringValue(s1^s2)
-		| _ -> None
+		| _ -> NoneValue
 
 let rec sub_ivalue e1 e2 =
 	match e1, e2 with
 		| NumberValue(n1), NumberValue(n2) -> NumberValue(n1 - n2)
-		| _ -> None
+		| _ -> NoneValue
 
 let rec mult_ivalue e1 e2 =
 	match e1, e2 with
 		| NumberValue(n1), NumberValue(n2) -> NumberValue(n1 * n2)
-		| _ -> None
+		| _ -> NoneValue
 
 let rec div_ivalue e1 e2 =
 	match e1, e2 with
 		| NumberValue(n1), NumberValue(n2) -> NumberValue(n1 / n2)
-		| _ -> None
+		| _ -> NoneValue
 
 let rec mod_ivalue e1 e2 =
 	match e1, e2 with
 		| NumberValue(n1), NumberValue(n2) -> NumberValue(n1 mod n2)
-		| _ -> None
+		| _ -> NoneValue
 
 let rec eq_ivalue e1 e2 =
 	match e1, e2 with
 		| NumberValue(n1), NumberValue(n2) -> BooleanValue(n1 = n2)
 		| StringValue(s1), StringValue(s2) -> BooleanValue(s1 = s2)
-		| _ -> None
+		| _ -> NoneValue
 
 let rec gt_ivalue e1 e2 =
 	match e1, e2 with
 		| NumberValue(n1), NumberValue(n2) -> BooleanValue(n1 > n2)
-		| _ -> None
+		| _ -> NoneValue
 
 let rec not_ivalue e =
 	match e with
 		| BooleanValue(b) -> BooleanValue(not b)
-		| _ -> None
+		| _ -> NoneValue
 
 let rec lt_ivalue e1 e2 =
 	match e1, e2 with
 		| NumberValue(n1), NumberValue(n2) -> BooleanValue(n1 < n2)
-		| _ -> None
+		| _ -> NoneValue
 
 let rec or_ivalue e1 e2 =
 	match e1, e2 with
 		| BooleanValue(b1), BooleanValue(b2) -> BooleanValue(b1 || b2)
-		| _ -> None
+		| _ -> NoneValue
 
 let rec and_ivalue e1 e2 =
 	match e1, e2 with
 		| BooleanValue(b1), BooleanValue(b2) -> BooleanValue(b1 && b2)
-		| _ -> None
+		| _ -> NoneValue
 
 let rec get_record_ivalue v s = 
 	match v with
 		| RecordValue(map) -> RecordMap.find s map
-		| _ -> None
+		| _ -> NoneValue
 
 let rec get_array_ivalue array index =
 	match array, index with
 		| ArrayValue(array), NumberValue(n) -> Array.get array n
-		| _ -> None
+		| _ -> NoneValue
 
 let rec string_of_ivalue e =
 	match e with
@@ -97,4 +105,6 @@ let rec string_of_ivalue e =
 		| BooleanValue b -> string_of_bool b
 		| StringValue s -> s
 		| RefValue r -> string_of_ivalue !r
-		| None -> "None"
+		| ArrayValue array -> (Array.fold_left (fun prev v -> prev^" "^(string_of_ivalue v)) "[ " array)^"]"
+		| RecordValue record -> (RecordMap.fold (fun k v prev -> prev^k^":"^(string_of_ivalue v)^" ") record "{ ")^"}"
+		| NoneValue -> "NoneValue"
