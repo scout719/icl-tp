@@ -151,7 +151,8 @@ and evalState env s =
 				| While (e, s) -> let BooleanValue(b) = evalExp' e in
 														if b then (
 															let temp_env = evalState' s in
-																evalState temp_env (While(e, s))
+																let new_node = While(e,s) in
+																	evalState temp_env new_node
 														) else
 															env
 				| If_Else (e, s1, s2) -> let BooleanValue(b) = evalExp' e in
@@ -201,7 +202,7 @@ and evalDecls env d = (* ATENTION  verificar se as variaveis nao colidem com as 
 			(* Verificar se nao existem duplicados e caso nao exista percorrer todas as declaracoes e criar o novo *)
 			(* ambiente *)
 			| Consts (list) -> hasDuplicatesConsts list;
-													List.fold_left (fun prev_env (x,y) -> assoc x (evalExp' y) prev_env) env list
+													List.fold_left (fun prev_env (x,y) -> assoc x (evalExp prev_env false y) prev_env) env list
 			(* Percorrer as varias listas e criar uma lista com todas as variaveis e criar o novo ambiente, depois verificar *)
 			(* se nao ha duplicados e se nao houver retornar o ambiente com as variaveis inicializadas *)
 			| Vars (list) -> let (new_env, allVars) = List.fold_left (fun (prev_env, prev_vars) (t, l) -> 
