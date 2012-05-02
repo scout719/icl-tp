@@ -3,7 +3,7 @@ program Fibonacci_Memoization;
 var n : Integer;
 		mem : Array(1024, Integer);
 
-function fib(n : Integer) : Integer\
+function fib(n : Integer) : Integer
 var n1, n2 : Integer;
 begin
 	if n = 0 or n = 1 then

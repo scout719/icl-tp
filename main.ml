@@ -15,7 +15,7 @@ let rec prompt lexbuf =
 ;;
 
 let main () =
-  let lexbuf = Lexing.from_channel (stdin) in prompt lexbuf
+  let lexbuf = Lexing.from_channel (open_in(Sys.argv.(1))) in prompt lexbuf
 ;;
 
 main();;
