@@ -1,0 +1,5 @@
+program InfiniteWhile;
+begin
+	while true do
+	writeln("OLa")
+end.
