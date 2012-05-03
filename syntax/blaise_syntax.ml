@@ -44,7 +44,6 @@ type statement =
 	| ReadLn of string list
 	| Seq of statement * statement
 	| CallProc of expr * (expr list)
-(*	| Dumb*)
 
 type decl_block =
 	| Consts of (string * expr) list

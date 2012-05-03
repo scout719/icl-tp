@@ -12,6 +12,7 @@ let buffer = ref [];;
 
 let clearBuffer () = buffer := [];;
 
+(* Funcao que parte uma string pelos espacos numa lista de strings contendo os varios tokens *)
 let split_char sep str =
   let string_index_from i =
     try Some (String.index_from str i sep)
@@ -27,6 +28,7 @@ let split_char sep str =
   in
   aux 0 []
 
+(* Funcao que le o proximo token do input e caso nao haja nada no input fica pendurado *)
 let rec readNext () =
 	if List.length !buffer <> 0 then (
 		let next::rest = !buffer in
@@ -42,6 +44,7 @@ let rec readNext () =
 			readNext()
 	);;
 
+(* Funcao que remove do buffer todos os tokens ate ao primeiro '\n' e deixa la o resto *)
 let rec readLine () =
 	let (buf, _) = List.fold_left (fun (prevBuf, prevFound) s -> if not prevFound then (
 																																([], s = "\n")
@@ -51,28 +54,34 @@ let rec readLine () =
 									) ([], false) !buffer in
 				buffer := buf;;
 
+(* Funcao que retorna o valor do id s em env desreferenciando-o,*)
+(* caso o id nao exista lanca Id_not_found s *)
 let find s env =
 	try
 		!(List.assoc s env)
 	with Not_found -> raise (Id_not_found s)
 	
+(* Funcao que adiciona ao env um tuplo com chave k e valor v *)
 let assoc k v env =
 	(k,ref v)::env
 	
+(* Funcao que altera em env o valor de chave k para v *)
 let update k v env =
 	try
 		let r = List.assoc k env in
 			r := v;
 			env
 	with Not_found -> raise (Id_not_found k)
-						
+
+(* Funcao que retorna () se nao houver constantes duplicadas na lista, caso contrario lanca Constant_already_declared x *)
 let hasDuplicatesConsts list =
 	List.iter (fun (x, _) -> let all = List.find_all (fun (s, _) -> s = x) list in
 														if List.length all <> 1 then
 															raise (Constant_already_declared x)
 														else
 															()) list
-	
+
+(* Funcao que retorna () se nao houver variaveis duplicadas na lista, caso contrario lanca Variable_already_declared x *)
 let hasDuplicatesVars list =
 	List.iter (fun x -> let all = List.find_all (fun s -> s = x) list in
 														if List.length all <> 1 then
@@ -80,35 +89,48 @@ let hasDuplicatesVars list =
 														else
 															()) list
 
+(*  *)
 let value_from_string_type t s =
 	match t with
 		| NumberValue _ -> NumberValue(int_of_string s)
 		| StringValue _ -> StringValue(s)
 		| BooleanValue _ -> BooleanValue(bool_of_string s)
 															
-let rec toresult lvalue value =
+let toresult lvalue value =
 		match value with
 			| RefValue(r) -> if not lvalue then (
-												toresult lvalue !r
+												!r
 											) else (
 												value
 											)
 			| _ -> value
 
-let rec get_var_copy v =
+let rec get_const_copy v =
 	match v with
 	| StringValue _ -> v
 	| NumberValue _ -> v
 	| BooleanValue _ -> v
-	| RefValue r -> RefValue(ref (get_var_copy !r))
+	| ProcValue _ -> v
+	| FunValue _ -> v
+	| RefValue r -> get_const_copy !r
 	| ArrayValue array -> let new_array = Array.init (Array.length array) (fun i -> let elem = Array.get array i in
-																																		RefValue(ref (get_var_copy elem))) in
+																																		get_const_copy elem) in
 													ArrayValue new_array
-	
-(*	Array.fold_left (fun (prev_arr, index) elem -> Array.set prev_arr index (get_copy elem);         *)
-(*																																(prev_arr, index + 1)) (Array.make)*)
-	| RecordValue record -> let new_record = RecordMap.fold (fun k v prev -> RecordMap.add k (RefValue(ref(get_var_copy v))) prev) record RecordMap.empty in
+	| RecordValue record -> let new_record = RecordMap.fold (fun k v prev -> RecordMap.add k (get_const_copy v) prev) record RecordMap.empty in
 														RecordValue(new_record)
+
+let rec assign lvalue rvalue =
+	let RefValue r = lvalue in
+		match !r with
+			| ArrayValue array -> let ArrayValue array2 = rvalue in
+															Array.iteri (fun index elem -> let rValElem = toresult false (Array.get array2 index) in
+																															assign elem rValElem; ()
+																				) array
+			| RecordValue record -> let RecordValue map2 = rvalue in
+																RecordMap.iter (fun k v -> let rValElem = toresult false (RecordMap.find k map2) in
+																															assign v rValElem; ()
+																							) record
+			| _ -> r := rvalue
 
 let rec evalExp env lvalue e =
 	let toresult' = toresult lvalue in
@@ -153,7 +175,7 @@ let rec evalExp env lvalue e =
 															)
 				| GetArray (e1, e2) -> toresult' (get_array_ivalue (evalExp' e1) (evalExp' e2))
 				| CallFun (e, list) -> let FunValue(listArgs, [consts;vars;opers], s, t, closure_env) = evalExp' e in
-																let args_env = List.fold_left2 (fun prev_env (s, _) e1 -> assoc s (evalExp' e1) prev_env) [] listArgs list in
+																let args_env = List.fold_left2 (fun prev_env (s, _) e1 -> assoc s (get_const_copy (evalExp' e1)) prev_env) [] listArgs list in
 																	let env_consts = evalDecls (args_env@closure_env) consts in
 																		let env_vars = evalDecls env_consts vars in
 																			let env_opers = evalDecls env_vars opers in
@@ -165,8 +187,8 @@ and evalState env s =
 	let evalState' = evalState env in
 		let evalExp' = evalExp env false in
 			match s with
-				| Assign (e1, e2) -> let (RefValue r, e2') = (evalExp env true e1, evalExp' e2) in
-																r := get_var_copy e2';
+				| Assign (e1, e2) -> let (e1', e2') = (evalExp env true e1, evalExp' e2) in
+																assign e1' e2';
 																env
 				| While (e, s) -> let BooleanValue(b) = evalExp' e in
 														if b then (
@@ -203,7 +225,7 @@ and evalState env s =
 														readLine();
 														new_env 
 				| CallProc (e, list) -> let ProcValue(listArgs, [consts;vars;opers], s, closure_env) = evalExp' e in
-																	let args_env = List.fold_left2 (fun prev_env (s, _) e1 -> assoc s (evalExp' e1) prev_env) [] listArgs list in
+																	let args_env = List.fold_left2 (fun prev_env (s, _) e1 -> assoc s (get_const_copy (evalExp' e1)) prev_env) [] listArgs list in
 																		let env_consts = evalDecls (args_env@closure_env) consts in
 																			let env_vars = evalDecls env_consts vars in
 																				let env_opers = evalDecls env_vars opers in

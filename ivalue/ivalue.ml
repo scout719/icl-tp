@@ -23,14 +23,7 @@ let rec defaultValue t =
 	| TArray (size, t1) -> ArrayValue( Array.init size (fun i -> RefValue(ref (defaultValue t1))))
 	| TRecord list -> let map = List.fold_left (fun prev (s, t1) -> RecordMap.add s (RefValue(ref (defaultValue t1))) prev) RecordMap.empty list in
 												RecordValue(map)
-(*	| TProc list -> let (args, _) = List.fold_left (fun (prev_list, i) t ->                      *)
-(*																								(prev_list@[("_"^(string_of_int i), t)], i + 1)*)
-(*																						) ([], 0) list in                                  *)
-(*										ProcValue(args, [], Dumb, [])                                              *)
-(*	| TFun (list, t) -> let (args, _) = List.fold_left (fun (prev_list, i) t ->                  *)
-(*																							(prev_list@[("_"^(string_of_int i), t)], i + 1)  *)
-(*																					) ([], 0) list in                                    *)
-(*									FunValue(args, [], Dumb, t, [])                                              *)
+	| _ -> NoneValue
 
 let rec sum_ivalue e1 e2 =
 	match e1, e2 with
@@ -106,5 +99,5 @@ let rec string_of_ivalue e =
 		| StringValue s -> s
 		| RefValue r -> string_of_ivalue !r
 		| ArrayValue array -> (Array.fold_left (fun prev v -> prev^" "^(string_of_ivalue v)) "[ " array)^"]"
-		| RecordValue record -> (RecordMap.fold (fun k v prev -> prev^k^":"^(string_of_ivalue v)^" ") record "{ ")^"}"
+		| RecordValue record -> "{ "^(RecordMap.fold (fun k v prev -> prev^k^":"^(string_of_ivalue v)^" ") record "")^"}"
 		| NoneValue -> "NoneValue"
