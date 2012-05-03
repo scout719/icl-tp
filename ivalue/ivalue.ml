@@ -2,7 +2,7 @@ open Blaise_syntax
 
 module RecordMap = Map.Make (String)
 
-type env = (string * (ivalue ref)) list
+type env = (string * (ivalue)) list
 
 and ivalue =
 	| StringValue of string
@@ -11,8 +11,8 @@ and ivalue =
 	| ArrayValue of ivalue array
 	| RecordValue of ivalue RecordMap.t
 	| RefValue of ivalue ref
-	| FunValue of ((string * iType) list) * (decl_block list) * statement * iType * env
-	| ProcValue of ((string * iType) list) * (decl_block list) * statement * env
+	| FunValue of ((string * iType) list) * (decl_block list) * statement * iType * env ref
+	| ProcValue of ((string * iType) list) * (decl_block list) * statement * env ref
 	| NoneValue
 
 let rec defaultValue t =
