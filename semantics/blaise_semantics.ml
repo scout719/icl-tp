@@ -270,9 +270,9 @@ let rec evalExp env lvalue e =
 										(* result para guardar o resultado da funcao *)
 										let new_env = assoc "result" (RefValue(ref (defaultValue t))) env_opers in 
 											(* avaliar funcao *)
-											let result_env = evalState new_env s in
-												(* ir buscar o valor ao env *)
-												toresult' (find "result" result_env)
+											evalState new_env s;
+											(* ir buscar o valor ao env *)
+											toresult' (find "result" new_env)
 												
 				| _ -> raise (Invalid_value ("FunValue expected: "^(string_of_ivalue exp)))
 				)
@@ -284,18 +284,17 @@ and evalState env s =
 		match s with
 		| Assign (e1, e2) -> 
 				let (e1', e2') = (evalExp env true e1, evalExp' e2) in
-					assign e1' e2';
-					env
+					assign e1' e2'
 						
 		| While (e, s) -> 
 				let exp = evalExp' e in
 					(match exp with
 						| BooleanValue b -> if b then (
-																	let temp_env = evalState' s in
-																		let new_node = While(e,s) in
-																			evalState temp_env new_node
+																	evalState' s;
+																	let new_node = While(e,s) in
+																		evalState' new_node
 																) else
-																		env
+																		()
 						| _ -> raise (Invalid_value ("Boolean expected: "^(string_of_ivalue exp)))
 					)
 					
@@ -316,7 +315,7 @@ and evalState env s =
 						| BooleanValue(b) -> if b then (
 																	evalState' s
 																) else 
-																	env
+																	()
 						| _ -> raise (Invalid_value ("Boolean expected: "^(string_of_ivalue exp)))
 					)
 					
@@ -324,17 +323,16 @@ and evalState env s =
 				List.iter (fun e -> 
 											let s = string_of_ivalue (evalExp' e) in
 												print_string s) list;
-												env
+												()
 		
 		| WriteLn list -> 
-				let env' = evalState' (Write list) in
-					print_string "\n";
-					flush stdout;
-					env'
+				evalState' (Write list);
+				print_string "\n";
+				flush stdout
 		
 		| Seq (s1, s2) -> 
-				let env1 = evalState' s1 in
-					evalState env1 s2
+				evalState' s1;
+				evalState' s2
 		
 		| Read list -> 
 				List.iter (fun s -> let found = find s env in
@@ -344,12 +342,11 @@ and evalState env s =
 															r := value
 												| _ -> raise (Invalid_value ("Ref expected: "^(string_of_ivalue found)))
 											)
-									) list; env
+									) list
 		
 		| ReadLn list -> 
-				let new_env = evalState' (Read list) in
-					readLine();
-					new_env 
+				evalState' (Read list);
+				readLine()
 					
 		| CallProc (e, list) -> 
 				let exp = evalExp' e in
@@ -367,10 +364,7 @@ and evalState env s =
 									(* criar opers *)
 									let env_opers = evalDecls env_vars opers in
 											(* avaliar procedimento *)
-											let _ = evalState (env_opers) s in
-												(* nao se retorna o env do proc para nao vir com as *)
-												(* consts, vars, args e env do proc *)
-												env
+											evalState (env_opers) s
 												
 				| _ -> raise (Invalid_value ("Proc expected: "^(string_of_ivalue exp)))
 				)

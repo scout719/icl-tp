@@ -19,7 +19,7 @@ let main () =
 		if Array.length args = 2 then
 			let lexbuf = Lexing.from_channel (open_in(Sys.argv.(1))) in prompt lexbuf
 		else
-			let lexbuf = Lexing.from_channel (stdin) in prompt lexbuf
+			let lexbuf = Lexing.from_channel stdin in prompt lexbuf
 ;;
 
 main();;
