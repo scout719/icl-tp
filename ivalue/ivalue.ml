@@ -1,8 +1,9 @@
 open Blaise_syntax
 
 module RecordMap = Map.Make (String)
+module EnvMap = Map.Make (String)
 
-type env = (string * (ivalue)) list
+type env = ivalue EnvMap.t
 
 and ivalue =
 	| StringValue of string
@@ -100,4 +101,6 @@ let rec string_of_ivalue e =
 		| RefValue r -> string_of_ivalue !r
 		| ArrayValue array -> (Array.fold_left (fun prev v -> prev^" "^(string_of_ivalue v)) "[ " array)^"]"
 		| RecordValue record -> "{ "^(RecordMap.fold (fun k v prev -> prev^k^":"^(string_of_ivalue v)^" ") record "")^"}"
+		| ProcValue _ -> "Procedure's closure"
+		| FunValue _ -> "Function's closure"
 		| NoneValue -> "NoneValue"

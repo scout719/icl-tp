@@ -10,7 +10,7 @@ let rec prompt lexbuf =
 			(*print_string ("Terminal:\n");*) (evalProgram s); (*(print_string "\n");*)
 			(*prompt lexbuf*)
   with
-   	Parsing.Parse_error -> print_string "Parsing error\n"; prompt lexbuf 
+   	Parsing.Parse_error -> print_string "Parsing error\n"; (* prompt lexbuf *) 
 	| End_of_file -> ()
 ;;
 
