@@ -16,11 +16,8 @@ let rec prompt lexbuf =
 
 let main () =
 	let args = Sys.argv in
-		if Array.length args = 3 then
-			if args.(1) = "-f" then
-				let lexbuf = Lexing.from_channel (open_in(Sys.argv.(2))) in prompt lexbuf
-			else
-				exit(1)
+		if Array.length args = 2 then
+			let lexbuf = Lexing.from_channel (open_in(Sys.argv.(1))) in prompt lexbuf
 		else
 			let lexbuf = Lexing.from_channel (stdin) in prompt lexbuf
 ;;
