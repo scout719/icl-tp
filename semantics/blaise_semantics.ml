@@ -61,20 +61,9 @@ let find s env =
 let assoc k v env =
 	EnvMap.add k v env
 
-(* Funcao que retorna () se nao houver constantes duplicadas na lista *)
-(* caso contrario lanca Constant_already_declared x *)
-let hasDuplicatesConsts list =
-	List.iter (fun (x, _) -> let all = List.find_all (fun (s, _) -> 
-																													s = x
-																										) list in
-															if List.length all <> 1 then
-																raise (Constant_already_declared x)
-															else
-																()) list
-
 (* Funcao que retorna () se nao houver variaveis duplicadas na lista *)
 (* caso contrario lanca Variable_already_declared x *)
-let hasDuplicatesVars list =
+let hasDuplicates list =
 	List.iter (fun x -> 
 								let all = List.find_all (fun s -> 
 																							s = x
@@ -255,24 +244,14 @@ let rec evalExp env lvalue e =
 				let exp = evalExp' e in
 				(match exp with
 				| FunValue(listArgs, [consts;vars;opers], s, t, closure_env) -> 
-						(* criar args *)
-						let args_env = List.fold_left2 (fun prev_env (s, _) e1 -> 
-																									let copy = (get_const_copy (evalExp' e1)) in
-																										assoc s copy prev_env
-																						) !closure_env listArgs list in
-							(* criar consts *)
-							let env_consts = evalDecls args_env consts in
-								(* criar vars *)
-								let env_vars = evalDecls env_consts vars in
-									(* criar opers *)
-									let env_opers = evalDecls env_vars opers in
-										(* preparar env para ter uma var *)
-										(* result para guardar o resultado da funcao *)
-										let new_env = assoc "result" (RefValue(ref (defaultValue t))) env_opers in 
-											(* avaliar funcao *)
-											evalState new_env s;
-											(* ir buscar o valor ao env *)
-											toresult' (find "result" new_env)
+						let temp_env = evalAllDecls listArgs list consts vars opers env in
+							(* preparar env para ter uma var *)
+							(* result para guardar o resultado da funcao *)
+							let new_env = assoc "result" (RefValue(ref (defaultValue t))) temp_env in 
+								(* avaliar funcao *)
+								evalState new_env s;
+								(* ir buscar o valor ao env *)
+								toresult' (find "result" new_env)
 												
 				| _ -> raise (Invalid_value ("FunValue expected: "^(string_of_ivalue exp)))
 				)
@@ -352,19 +331,9 @@ and evalState env s =
 				let exp = evalExp' e in
 				(match exp with
 				| ProcValue(listArgs, [consts;vars;opers], s, closure_env) -> 
-						(* criar args *)
-						let args_env = List.fold_left2 (fun prev_env (s, _) e1 -> 
-																									let copy = (get_const_copy (evalExp' e1)) in
-																										assoc s copy prev_env
-																						) !closure_env listArgs list in
-							(* criar consts *)
-							let env_consts = evalDecls args_env consts in
-								(* criar vars *)
-								let env_vars = evalDecls env_consts vars in
-									(* criar opers *)
-									let env_opers = evalDecls env_vars opers in
-											(* avaliar procedimento *)
-											evalState (env_opers) s
+						let new_env = evalAllDecls listArgs list consts vars opers env in
+							(* avaliar procedimento *)
+							evalState new_env s
 												
 				| _ -> raise (Invalid_value ("Proc expected: "^(string_of_ivalue exp)))
 				)
@@ -378,14 +347,35 @@ and evalOpers env o =
 				let closure = FunValue(listArgs, decl, s, t, ref_env) in
 					let new_env = assoc name closure env in
 						ref_env := new_env;
-						new_env
+						(name, new_env)
 						
 	| Procedure(name, listArgs, decl, s) ->  
 			let ref_env = ref env in
 				let closure = ProcValue(listArgs, decl, s, ref_env) in
 					let new_env = assoc name closure env in
 						ref_env := new_env;
-						new_env
+						(name, new_env)
+
+(* Funcao que retorna o env actualizado com as varias declaracoes *)
+(* Esta funcao verifica se existe variaveis e constantes repetidas *)
+(* lancando uma excepcao quando isso aconteca *)
+and evalAllDecls listArgs listExpr consts vars opers env =
+	let evalExp' = evalExp env false in
+  	(* criar args *)
+  	let (allArgs, args_env) = 
+  		List.fold_left2 (fun (prev_list, prev_env) (s, _) e1 -> 
+  													let copy = (get_const_copy (evalExp' e1)) in
+  														(s::prev_list, assoc s copy prev_env)
+  										) ([], env) listArgs listExpr in
+  		hasDuplicates allArgs;
+  		(* criar consts *)
+  		let (allConsts, env_consts) = evalDecls args_env consts in
+  			(* criar vars *)
+  			let (allVars, env_vars) = evalDecls env_consts vars in
+  				(* criar opers *)
+  				let (allOpers, env_opers) = evalDecls env_vars opers in
+  					hasDuplicates (allConsts@allVars);
+  					env_opers
 
 (* Funcao que avalia um bloco de declaracoes e retorna um env actualizado *)
 (* com as declaracoes *)
@@ -394,38 +384,29 @@ and evalDecls env d =
 	(* Verificar se nao existem duplicados e caso nao exista percorrer todas *)
 	(* as declaracoes e criar o novo ambiente *)
 	| Consts (list) -> 
-			hasDuplicatesConsts list;
-				List.fold_left (fun prev_env (x,y) -> 
-															assoc x (evalExp prev_env false y) prev_env
-												) env list
+			List.fold_left (fun (prev_consts, prev_env) (x,y) -> 
+														(x::prev_consts, assoc x (evalExp prev_env false y) prev_env)
+											) ([], env) list
 												
 	(* Percorrer as varias listas e criar uma lista com todas as variaveis e *)
 	(* criar o novo ambiente, depois verificar se nao ha duplicados e se nao *)
 	(* houver retornar o ambiente com as variaveis inicializadas *)
 	| Vars (list) -> 
-			let (new_env, allVars) = 
-					List.fold_left (fun (prev_env, prev_vars) (t, l) -> 
+			List.fold_left (fun (prev_vars, prev_env) (t, l) -> 
 														let temp_env = 
-																List.fold_left (fun prev s -> 
+															List.fold_left (fun prev s -> 
 																										assoc s (RefValue(ref (defaultValue t))) prev
-																								) prev_env l in
-															(temp_env, l@prev_vars)
-													) (env, []) list in
-				List.iter (fun x -> 
-												try
-													let _ = EnvMap.find x env in
-														raise (Constant_already_declared x)
-												with Not_found -> ()
-									) allVars;
-				hasDuplicatesVars allVars;
-				new_env
+																							) prev_env l in
+															(l@prev_vars, temp_env)
+											) ([], env) list
 
 	(* Percorrer todas as declaracoes de funcoes e procedimentos e avaliar *)
 	(* cada declaracao e retornar o ambiente *)
 	| Operations (list) -> 
-			List.fold_left (fun prev_env x -> 
-														evalOpers prev_env x
-											) env list
+			List.fold_left (fun (prev_opers, prev_env) x ->
+														let (name, new_env) = evalOpers prev_env x in
+															(name::prev_opers, new_env)
+											) ([], env) list
 
 (* Funcao que avalia um programa avaliando as declaracoes num novo ambiente *)
 (* e executa as instrucoes do corpo do programa *)
@@ -435,10 +416,8 @@ let rec evalProgram p =
 			(* Avaliar cada parte do bloco das declaracoes, juntar tudo num env e *)
 			(* enviar para a avaliacao do corpo principal do programa *)
 			| Program(name, [consts; vars; opers], s) -> 
-					let env_consts = evalDecls EnvMap.empty consts in
-						let env_vars = evalDecls env_consts vars in
-							let env_opers = evalDecls env_vars opers in
-								let _ = evalState env_opers s in
-									()
+					let env = evalAllDecls [] [] consts vars opers EnvMap.empty in
+						let _ = evalState env s in
+							()
 									
 			| _ -> () (* dummy *)
