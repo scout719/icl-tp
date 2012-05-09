@@ -53,4 +53,12 @@ _build/syntax/blaise_syntax.cmo
 _build/syntax/blaise_syntax.cmx
 _build/syntax/blaise_syntax.o
 src.zip
+_build/main.byte
+_build/parser/blaise_parser.cmo
+_build/typechk/typechk.annot
+_build/typechk/typechk.cmi
+_build/typechk/typechk.cmo
+_build/typechk/typechk.ml
+_build/typechk/typechk.ml.depends
+main.byte
 

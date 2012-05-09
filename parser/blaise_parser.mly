@@ -123,7 +123,7 @@ stmt:
 | WRITE LPAR expr_list RPAR { Write( $3 ) }
 | WRITELN LPAR expr_list_or_empty RPAR { WriteLn( $3 ) }
 | factor LPAR expr_list_or_empty RPAR { CallProc($1, $3) }
-| RESULT ASSIGN expr { Assign(Id("result"), $3 ) }
+| RESULT ASSIGN expr { Assign(Id("result",TUndefined), $3 ) }
 | READ LPAR id_list RPAR { Read( $3 ) }
 | READLN LPAR id_list RPAR { ReadLn( $3 ) }
 ;
@@ -144,55 +144,55 @@ expr:
 
 or_logic:
   and_logic { $1 }
-| or_logic OR and_logic { Or($1, $3) }
+| or_logic OR and_logic { Or($1, $3,TUndefined) }
 ;
 
 and_logic:
   compare { $1 }
-| and_logic AND compare { And($1, $3) }
+| and_logic AND compare { And($1, $3,TUndefined) }
 ;
 
 compare:
   arith { $1 }
-| compare EQUAL arith { Eq($1, $3) }
-| compare NEQ arith { Neq($1, $3) }
-| compare GT arith { Gt($1, $3) }
-| compare LT arith { Lt($1, $3) }
-| compare GTEQ arith { Gteq($1, $3) }
-| compare LTEQ arith { Lteq($1, $3) }
+| compare EQUAL arith { Eq($1, $3,TUndefined) }
+| compare NEQ arith { Neq($1, $3,TUndefined) }
+| compare GT arith { Gt($1, $3,TUndefined) }
+| compare LT arith { Lt($1, $3,TUndefined) }
+| compare GTEQ arith { Gteq($1, $3,TUndefined) }
+| compare LTEQ arith { Lteq($1, $3,TUndefined) }
 ;
 
 arith: 
-  arith PLUS term { Add($1, $3) }
-| arith MINUS term { Sub($1, $3) }
+  arith PLUS term { Add($1, $3,TUndefined) }
+| arith MINUS term { Sub($1, $3,TUndefined) }
 | term { $1 }
 ;
 
 term: 
-  term MULT un_op { Mult($1, $3) }
-| term DIV un_op { Div($1, $3) }
-| term MOD un_op { Mod($1, $3) }
+  term MULT un_op { Mult($1, $3,TUndefined) }
+| term DIV un_op { Div($1, $3,TUndefined) }
+| term MOD un_op { Mod($1, $3,TUndefined) }
 | un_op { $1 }
 ;
 
 un_op:
   factor { $1 }
-| NOT factor { Not($2) }
-| MINUS factor { Compl($2) }
+| NOT factor { Not($2,TUndefined) }
+| MINUS factor { Compl($2,TUndefined) }
 ;
 
 factor:
   NUM { Number($1) }
 | STRING_CONST { String($1) }
-| ID { Id($1) }
+| ID { Id($1,TUndefined) }
 | LPAR expr RPAR { $2 }
 | TRUE { Boolean(true) }
 | FALSE { Boolean(false) }
-| factor DOT ID { GetRecord($1, $3) }
-| factor LPAR expr_list_or_empty RPAR { CallFun($1, $3) }
-| factor LSBRA expr RSBRA { GetArray($1, $3) }
-| LSBRA expr_list_or_empty RSBRA { Array($2) }
-| LCBRA rec_decl_id_list RCBRA { Record($2) }
+| factor DOT ID { GetRecord($1, $3,TUndefined) }
+| factor LPAR expr_list_or_empty RPAR { CallFun($1, $3,TUndefined) }
+| factor LSBRA expr RSBRA { GetArray($1, $3,TUndefined) }
+| LSBRA expr_list_or_empty RSBRA { Array($2,TUndefined) }
+| LCBRA rec_decl_id_list RCBRA { Record($2,TUndefined) }
 ;
 
 rec_decl_id_list:

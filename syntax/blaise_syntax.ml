@@ -6,32 +6,36 @@ type iType =
 	| TProc of (iType list)
 	| TArray of int * iType
 	| TRecord of (string * iType) list
+	| TRef of iType ref
+	| TUnit
+	| TNone
+	| TUndefined
 
 type expr = 
 	| Number of int
 	| String of string
 	| Boolean of bool
-	| Array of expr list
-	| Record of (string * expr) list
-	| Add of expr * expr
-	| Sub of expr * expr
-	| Compl of expr
-	| Mult of expr * expr
-	| Div of expr * expr
-	| Mod of expr * expr
-	| Eq of expr * expr
-	| Neq of expr * expr
-	| Gt of expr * expr
-	| Lt of expr * expr
-	| Gteq of expr * expr
-	| Lteq of expr * expr
-	| And of expr * expr
-	| Or of expr * expr
-	| Not of expr
-	| Id of string
-	| GetArray of expr * expr
-	| GetRecord of expr * string
-	| CallFun of expr * (expr list)
+	| Array of expr list * iType
+	| Record of (string * expr) list * iType
+	| Add of expr * expr * iType
+	| Sub of expr * expr * iType
+	| Compl of expr * iType
+	| Mult of expr * expr * iType
+	| Div of expr * expr * iType
+	| Mod of expr * expr * iType
+	| Eq of expr * expr * iType
+	| Neq of expr * expr * iType
+	| Gt of expr * expr * iType
+	| Lt of expr * expr * iType
+	| Gteq of expr * expr * iType
+	| Lteq of expr * expr * iType
+	| And of expr * expr * iType
+	| Or of expr * expr * iType
+	| Not of expr * iType
+	| Id of string * iType
+	| GetArray of expr * expr * iType
+	| GetRecord of expr * string * iType
+	| CallFun of expr * (expr list) * iType
 
 type statement =
 	| Assign of expr * expr

@@ -1,5 +1,6 @@
 open Blaise_syntax
 open Ivalue
+open Typechk
 
 exception Id_not_found of string
 exception Id_found of string
@@ -160,87 +161,87 @@ let rec evalExp env lvalue e =
 		| String s -> StringValue(s)
 		| Boolean b -> BooleanValue(b)
 		
-		| Record list -> 
+		| Record (list,_) -> 
 				let map = List.fold_left (fun prev (s, e) -> 
 																				RecordMap.add s (evalExp' e) prev
 																	) RecordMap.empty list in
 						RecordValue(map)
 		
-		| Array (list) -> 
+		| Array (list,_) -> 
 				let list2 = List.map (fun e -> 
 																	evalExp' e
 															) list in
 						ArrayValue( Array.of_list list2)
 		
-		| Add (e1, e2) -> 
+		| Add (e1, e2,_) -> 
 				sum_ivalue (toresult' (evalExp' e1)) (toresult' (evalExp' e2))
 		
-		| Sub (e1, e2) -> 
+		| Sub (e1, e2,_) -> 
 				sub_ivalue (toresult' (evalExp' e1)) (toresult' (evalExp' e2))
 		
-		| Mult (e1, e2) -> 
+		| Mult (e1, e2,_) -> 
 				mult_ivalue (toresult' (evalExp' e1)) (toresult' (evalExp' e2))
 		
-		| Div (e1, e2) -> 
+		| Div (e1, e2,_) -> 
 				div_ivalue (toresult' (evalExp' e1)) (toresult' (evalExp' e2))
 		
-		| Compl e -> 
+		| Compl (e,_) -> 
 				sub_ivalue (NumberValue(0)) (toresult' (evalExp' e))
 		
-		| Mod (e1, e2) -> 
+		| Mod (e1, e2,_) -> 
 				mod_ivalue (toresult' (evalExp' e1)) (toresult' (evalExp' e2))
 		
-		| Eq (e1, e2) -> 
+		| Eq (e1, e2,_) -> 
 				eq_ivalue (toresult' (evalExp' e1)) (toresult' (evalExp' e2))
 		
-		| Neq (e1, e2) -> 
+		| Neq (e1, e2,_) -> 
 				let eq = eq_ivalue (toresult' (evalExp' e1)) (toresult' (evalExp' e2)) in
 					not_ivalue eq
 		
-		| Gt (e1, e2) -> 
+		| Gt (e1, e2,_) -> 
 				gt_ivalue (toresult' (evalExp' e1)) (toresult' (evalExp' e2))
 		
-		| Lt (e1, e2) -> 
+		| Lt (e1, e2,_) -> 
 				lt_ivalue (toresult' (evalExp' e1)) (toresult' (evalExp' e2))
 		
-		| Gteq (e1, e2) -> 
+		| Gteq (e1, e2,_) -> 
 				let e1' = (toresult' (evalExp' e1)) in
 					let e2' = (toresult' (evalExp' e2)) in
 						let gt = gt_ivalue e1' e2' in
 							let eq = eq_ivalue e1' e2' in
 								or_ivalue gt eq
 		
-		| Lteq (e1, e2) -> 
+		| Lteq (e1, e2,_) -> 
 				let e1' = (toresult' (evalExp' e1)) in
 					let e2' = (toresult' (evalExp' e2)) in
 						let lt = lt_ivalue e1' e2' in
 							let eq = eq_ivalue e1' e2' in
 								or_ivalue lt eq
 		
-		| And (e1, e2) -> 
+		| And (e1, e2,_) -> 
 				and_ivalue (toresult' (evalExp' e1)) (toresult' (evalExp' e2))
 		
-		| Or (e1, e2) -> 
+		| Or (e1, e2,_) -> 
 				or_ivalue (toresult' (evalExp' e1)) (toresult' (evalExp' e2))
 		
-		| Not e -> not_ivalue (toresult' (evalExp' e))
-		| Id s -> toresult' (find s env)
+		| Not (e,_) -> not_ivalue (toresult' (evalExp' e))
+		| Id (s,_) -> toresult' (find s env)
 		
-		| GetRecord (e, s) -> 
+		| GetRecord (e, s,_) -> 
 				(try 
 					toresult' (get_record_ivalue (evalExp' e) s)
 				with
 					| Not_found -> raise (Element_not_found_in_record s)
 				)
 		
-		| GetArray (e1, e2) -> 
+		| GetArray (e1, e2,_) -> 
 				(try
 					toresult' (get_array_ivalue (evalExp' e1) (evalExp' e2))
 				with
 					| Invalid_argument _ -> raise (Index_out_of_bounds)
 				)
 				
-		| CallFun (e, list) -> 
+		| CallFun (e, list,_) -> 
 				let exp = evalExp' e in
 				(match exp with
 				| FunValue(listArgs, [consts;vars;opers], s, t, closure_env) -> 
