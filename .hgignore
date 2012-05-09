@@ -61,4 +61,5 @@ _build/typechk/typechk.cmo
 _build/typechk/typechk.ml
 _build/typechk/typechk.ml.depends
 main.byte
-
+_build/typechk/typechk.cmx
+_build/typechk/typechk.o
