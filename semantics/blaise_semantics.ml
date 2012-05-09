@@ -3,8 +3,7 @@ open Ivalue
 
 exception Id_not_found of string
 exception Id_found of string
-exception Variable_already_declared of string
-exception Constant_already_declared of string
+exception Id_already_declared of string
 exception Element_not_found_in_record of string
 exception Index_out_of_bounds
 exception Invalid_value_to_read of string
@@ -45,11 +44,6 @@ let rec readNext () =
 			readNext()
 	);;
 
-(* Funcao que remove do buffer todos os tokens ate ao primeiro '\n' e deixa *)
-(* la o resto *)
-let rec readLine () =
-				buffer := [];;
-
 (* Funcao que retorna o valor do id s em env desreferenciando-o *)
 (* caso o id nao exista lanca Id_not_found s *)
 let find s env =
@@ -69,7 +63,7 @@ let hasDuplicates list =
 																							s = x
 																				) list in
 									if List.length all <> 1 then
-										raise (Variable_already_declared x)
+										raise (Id_already_declared x)
 									else
 										()) list
 
@@ -149,6 +143,12 @@ let rec assign lvalue rvalue =
 			)
 			
 	| _ -> raise (Invalid_value ("Ref expected: "^(string_of_ivalue lvalue)))
+
+
+(***************************************************************************)
+(************************    INTERPRETER EXPR    ***************************)
+(***************************************************************************)
+
 
 (* Funcao que avalia uma expressao no env dado e desreferencia implicitamente *)
 (* se lvalue for false *)
@@ -256,6 +256,12 @@ let rec evalExp env lvalue e =
 				| _ -> raise (Invalid_value ("FunValue expected: "^(string_of_ivalue exp)))
 				)
 
+
+(***************************************************************************)
+(************************     INTERPRETER STATE   **************************)
+(***************************************************************************)
+
+
 (* Funcao que avalia um statement num dado env e retorna o env resultante *)
 and evalState env s =
 	let evalState' = evalState env in
@@ -325,7 +331,7 @@ and evalState env s =
 		
 		| ReadLn list -> 
 				evalState' (Read list);
-				readLine()
+				clearBuffer()
 					
 		| CallProc (e, list) -> 
 				let exp = evalExp' e in
@@ -337,6 +343,12 @@ and evalState env s =
 												
 				| _ -> raise (Invalid_value ("Proc expected: "^(string_of_ivalue exp)))
 				)
+
+
+(***************************************************************************)
+(************************     INTERPRETER OPERS   **************************)
+(***************************************************************************)
+
 
 (* Funcao que avalia a declaracao de uma operacao e retorna o env *)
 (* actualizado com o closure *)
@@ -355,6 +367,13 @@ and evalOpers env o =
 					let new_env = assoc name closure env in
 						ref_env := new_env;
 						(name, new_env)
+
+
+
+(***************************************************************************)
+(************************     INTERPRETER DECLS  ***************************)
+(***************************************************************************)
+
 
 (* Funcao que retorna o env actualizado com as varias declaracoes *)
 (* Esta funcao verifica se existe variaveis e constantes repetidas *)
@@ -407,6 +426,12 @@ and evalDecls env d =
 														let (name, new_env) = evalOpers prev_env x in
 															(name::prev_opers, new_env)
 											) ([], env) list
+
+
+(***************************************************************************)
+(************************     INTERPRETER PROG   ***************************)
+(***************************************************************************)
+
 
 (* Funcao que avalia um programa avaliando as declaracoes num novo ambiente *)
 (* e executa as instrucoes do corpo do programa *)
