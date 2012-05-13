@@ -27,42 +27,12 @@ let check_duplicates list =
 									if List.length all <> 1 then
 										raise (Id_already_declared x)
 									else
-										()) list
-
-(* let rec compare_types t1 t2 =
-	match t1, t2 with
-		| TNumber, TNumber -> true
-		| TString, TString -> true
-		| TBoolean, TBoolean -> true
-		| TRef r1, TRef r2 -> compare_types !r1 !r2
-
-		| TArray (length1, t1'), TArray (length2, t2') -> length1 = length2 && (compare_types t1' t2')
-
-		| TRecord list1, TRecord list2 -> 
-					List.fold_left2 (fun 	prev_comp (s1, t1') (s2, t2') ->
-																prev_comp && s1 = s2 && (compare_types t1' t2')
-													) true list1 list2
-
-		| TFun (list1, t1'), TFun (list2, t2') -> 
-					let matching_args_types = 
-							List.fold_left2 (fun 	prev_comp t1' t2' ->
-																		prev_comp && (compare_types t1' t2')
-															) true list1 list2 in
-						matching_args_types && (compare_types t1' t2')
-
-		| TProc list1, TProc list2 -> 
-					List.fold_left2 (fun 	prev_comp t1' t2' ->
-																		prev_comp && (compare_types t1' t2')
-															) true list1 list2
-		| TUnit, TUnit -> true
-		| TNone, TNone -> true
-		| TUndefined, TUndefined -> true
-  	| _ -> false;; *)
+										()) list;;
 
 let to_result t =
 	match t with
 		| TRef r -> !r
-		| _ -> t
+		| _ -> t;;
 
 let rec check_assign l r =
 	print_string ("Left: "^(string_of_iType l)^" Right: "^(string_of_iType r)^"\n" );
@@ -82,13 +52,32 @@ let rec check_assign l r =
 																			else
 																				TNone
 																) TUnit list1 list2
+																
+					| TFun (list1, t1), TFun (list2, t2) ->
+								let matching_args = List.fold_left2 (fun prev_match t1' t2' ->
+																												t1' = t2' && prev_match
+																										) true list1 list2 in
+									if matching_args && t1 = t2 then
+										TUnit
+									else
+										TNone
+																
+					| TProc list1, TProc list2 ->
+								let matching_args = List.fold_left2 (fun prev_match t1' t2' ->
+																												t1' = t2' && prev_match
+																										) true list1 list2 in
+									if matching_args then
+										TUnit
+									else
+										TNone
+										
 					| tl, tr -> 
 								if tl = (to_result tr) then
 									TUnit
 								else
 									TNone
 				)
-		| _ -> TNone
+		| _ -> TNone;;
 
 let rec typechk_exp env e =
 	let typechk_exp' = typechk_exp env in
@@ -407,7 +396,7 @@ and typechk_oper env o =
 					let new_env = assoc "result" (TRef(return_type_ref)) recursive_env in
 					let s' = typechk_stat new_env s in
 					let fun_type = if (get_type_stat s') = TUnit then t else TNone in
-					let final_env = assoc name (TFun ( args_type_list, fun_type)) temp_env in
+					let final_env = assoc name (TFun ( args_type_list, fun_type)) env in
 						(name, Function (name, args_list, decl_block, s', fun_type), final_env)
 		
 		| Procedure (name, args_list, [consts; vars; opers], s, _) -> 
@@ -416,7 +405,7 @@ and typechk_oper env o =
 					let recursive_env = assoc name TUnit temp_env in
 					let s' = typechk_stat recursive_env s in
 					let s_type = get_type_stat s' in
-					let final_env = assoc name (TProc ( args_type_list)) temp_env in
+					let final_env = assoc name (TProc ( args_type_list)) env in
 						(name, Procedure (name, args_list, decl_block, s', s_type), final_env)
 		
 		| _ -> raise (Invalid_type "") (* dummy *)
@@ -456,7 +445,7 @@ and typechk_decl env d =
   																		else
   																			(prev_opers @ [name], prev_checked @ [oper'], TNone, new_env)
       												) ([], [], TUnit, env) list in
-							(all_opers, Operations(opers', opers_type), opers_env)
+							(all_opers, Operations(opers', opers_type), opers_env);;
 
 let typechk_program p =
 	match p with
@@ -469,4 +458,4 @@ let typechk_program p =
 					else
 						Program(name, decl_block, s', TNone)
 								
-		| _ -> raise (Invalid_type "") (* dummy *)
+		| _ -> raise (Invalid_type "") (* dummy *);;

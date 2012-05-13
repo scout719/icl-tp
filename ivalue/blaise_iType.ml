@@ -131,4 +131,9 @@ let rec get_reference_to t =
 															) [] list in
 					TRef (ref (TRecord list'))
 		
+		| TFun (list, t) -> 
+					TRef (ref (TFun(list, t)))
+
+		| TProc list -> 
+					TRef (ref (TProc list))
 		| _ -> TNumber;;  (** CHECK ***)
