@@ -29,7 +29,7 @@ open Blaise_syntax
 
 
 main: 
-  PROGRAM ID SEMICOLON decl_block begin_end_block DOT { Program($2, $4, $5) }
+  PROGRAM ID SEMICOLON decl_block begin_end_block DOT { Program($2, $4, $5, TUndefined) }
 |	QUIT { exit(0) }
 ;
 /*main:
@@ -37,17 +37,17 @@ main:
 ;*/
 
 decl_block:
-  const_block var_block decl_list { [$1;$2;Operations($3)] }
+  const_block var_block decl_list { [$1;$2;Operations($3, TUndefined)] }
 ;
 
 var_block:
-  VAR decl_id_list { Vars($2)}
-| { Vars([]) }
+  VAR decl_id_list { Vars($2, TUndefined)}
+| { Vars([], TUndefined) }
 ;
 
 const_block:
-  CONST decl_cid_list { Consts($2) }
-| { Consts([]) }
+  CONST decl_cid_list { Consts($2, TUndefined) }
+| { Consts([], TUndefined) }
 ;
 
 decl_id_list:
@@ -88,7 +88,7 @@ fun_decl:
 ;
 
 proc_decl:
-	PROCEDURE ID LPAR param_list RPAR decl_block begin_end_block { Procedure($2, $4, $6, $7) }
+	PROCEDURE ID LPAR param_list RPAR decl_block begin_end_block { Procedure($2, $4, $6, $7, TUndefined) }
 ;
 
 param_list:
@@ -106,7 +106,7 @@ begin_end_block:
 ;
 
 stmt_seq:
-  stmt_seq SEMICOLON stmt { Seq($1, $3) }
+  stmt_seq SEMICOLON stmt { Seq($1, $3, TUndefined) }
 | stmt { $1 }
 ;
 
@@ -116,14 +116,14 @@ opt_begin_end_block:
 ;
 
 stmt:
-  expr ASSIGN expr { Assign( $1, $3 ) }
-| WHILE expr DO opt_begin_end_block { While( $2, $4 ) }
-| IF expr THEN opt_begin_end_block ELSE opt_begin_end_block { If_Else( $2, $4, $6 ) }
-| IF expr THEN opt_begin_end_block %prec LOWER_THAN_ELSE { If( $2, $4 ) }
-| WRITE LPAR expr_list RPAR { Write( $3 ) }
-| WRITELN LPAR expr_list_or_empty RPAR { WriteLn( $3 ) }
-| factor LPAR expr_list_or_empty RPAR { CallProc($1, $3) }
-| RESULT ASSIGN expr { Assign(Id("result",TUndefined), $3 ) }
+  expr ASSIGN expr { Assign( $1, $3, TUndefined) }
+| WHILE expr DO opt_begin_end_block { While( $2, $4, TUndefined ) }
+| IF expr THEN opt_begin_end_block ELSE opt_begin_end_block { If_Else( $2, $4, $6, TUndefined ) }
+| IF expr THEN opt_begin_end_block %prec LOWER_THAN_ELSE { If( $2, $4, TUndefined ) }
+| WRITE LPAR expr_list RPAR { Write( $3, TUndefined ) }
+| WRITELN LPAR expr_list_or_empty RPAR { WriteLn( $3, TUndefined ) }
+| factor LPAR expr_list_or_empty RPAR { CallProc($1, $3, TUndefined) }
+| RESULT ASSIGN expr { Assign(Id("result",TUndefined), $3, TUndefined ) }
 | READ LPAR id_list RPAR { Read( $3 ) }
 | READLN LPAR id_list RPAR { ReadLn( $3 ) }
 ;

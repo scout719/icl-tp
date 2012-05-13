@@ -38,52 +38,39 @@ type expr =
 	| CallFun of expr * (expr list) * iType
 
 type statement =
-	| Assign of expr * expr
-	| While of expr * statement
-	| If_Else of expr * statement * statement
-	| If of expr * statement
-	| Write of expr list
-	| WriteLn of expr list
+	| Assign of expr * expr * iType
+	| While of expr * statement * iType
+	| If_Else of expr * statement * statement *iType
+	| If of expr * statement * iType
+	| Write of expr list * iType
+	| WriteLn of expr list * iType
 	| Read of string list
 	| ReadLn of string list
-	| Seq of statement * statement
-	| CallProc of expr * (expr list)
+	| Seq of statement * statement * iType
+	| CallProc of expr * (expr list) * iType
 
 type decl_block =
-	| Consts of (string * expr) list
-	| Vars of (iType * (string list)) list
-	| Operations of oper list
+	| Consts of (string * expr) list * iType
+	| Vars of (iType * (string list)) list * iType
+	| Operations of oper list * iType
 
 and oper = 
 	| Function of string * ((string * iType) list) * (decl_block list) * statement * iType
-	| Procedure of string * ((string * iType) list) * (decl_block list) * statement
+	| Procedure of string * ((string * iType) list) * (decl_block list) * statement * iType
 
 type program = 
-	| Program of string * (decl_block list) * statement
+	| Program of string * (decl_block list) * statement * iType
 
-let get_iType e =
-	match e with
-  	| Number _ -> TNumber
-  	| String _ -> TString
-  	| Boolean _ -> TBoolean
-  	| Array (_, t) -> t
-  	| Record (_ , t) -> t
-  	| Add (_, _, t) -> t
-  	| Sub (_, _, t) -> t
-  	| Mult (_, _, t) -> t
-  	| Div (_, _, t) -> t
-  	| Compl (_, t) -> t
-  	| Mod (_, _, t) -> t
-  	| Eq (_, _, t) -> t
-  	| Neq (_, _, t) -> t
-  	| Gt (_, _, t) -> t
-  	| Lt (_, _, t) -> t
-  	| Gteq (_, _, t) -> t
-  	| Lteq (_, _, t) -> t
-  	| And (_, _, t) -> t
-  	| Or (_, _, t) -> t
-  	| Not (_, t) -> t
-  	| Id (_, t) -> t
-  	| GetArray (_, _, t) -> t
-  	| GetRecord (_, _, t) -> t
-  	| CallFun (_, _, t) -> t
+let string_of_iType t =
+	match t with
+  	(*| TNumber -> "Number"
+  	| TString -> "String"
+  	| TBoolean -> "Boolean"
+  	| TFun -> letof (iType list) * iType
+  	| TProc of (iType list)
+  	| TArray of int * iType
+  	| TRecord of (string * iType) list
+  	| TRef of iType ref *)
+  	| TUnit -> "Unit"
+  	| TNone -> "None"
+  	| TUndefined -> "Undefined"

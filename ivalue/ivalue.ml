@@ -64,6 +64,7 @@ let rec eq_ivalue e1 e2 =
 let rec gt_ivalue e1 e2 =
 	match e1, e2 with
 	| NumberValue(n1), NumberValue(n2) -> BooleanValue(n1 > n2)
+	| StringValue(s1), StringValue(s2) -> BooleanValue(s1 > s2)
 	| _ -> NoneValue
 
 let rec not_ivalue e =
@@ -74,6 +75,7 @@ let rec not_ivalue e =
 let rec lt_ivalue e1 e2 =
 	match e1, e2 with
 	| NumberValue(n1), NumberValue(n2) -> BooleanValue(n1 < n2)
+	| StringValue(s1), StringValue(s2) -> BooleanValue(s1 < s2)
 	| _ -> NoneValue
 
 let rec or_ivalue e1 e2 =

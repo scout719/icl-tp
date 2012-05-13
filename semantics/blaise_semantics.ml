@@ -1,10 +1,9 @@
 open Blaise_syntax
+open Blaise_typechk
 open Ivalue
-open Typechk
 
 exception Id_not_found of string
 exception Id_found of string
-exception Id_already_declared of string
 exception Element_not_found_in_record of string
 exception Index_out_of_bounds
 exception Invalid_value_to_read of string
@@ -56,18 +55,6 @@ let find s env =
 let assoc k v env =
 	EnvMap.add k v env
 
-(* Funcao que retorna () se nao houver variaveis duplicadas na lista *)
-(* caso contrario lanca Variable_already_declared x *)
-let hasDuplicates list =
-	List.iter (fun x -> 
-								let all = List.find_all (fun s -> 
-																							s = x
-																				) list in
-									if List.length all <> 1 then
-										raise (Id_already_declared x)
-									else
-										()) list
-
 (* Funcao que consoante o valor passado em v converte o valor da string s *)
 (* para o valor correcto *)
 let value_from_string v s =
@@ -81,7 +68,7 @@ let value_from_string v s =
 (* nao o valor value *)	
 let toresult lvalue value =
 		match value with
-			| RefValue(r) -> 
+			| RefValue r -> 
 					if not lvalue then
 						!r
 					else
@@ -268,23 +255,23 @@ and evalState env s =
 	let evalState' = evalState env in
 	let evalExp' = evalExp env false in
 		match s with
-		| Assign (e1, e2) -> 
-				let (e1', e2') = (evalExp env true e1, evalExp' e2) in
+		| Assign (e1, e2, _) -> 
+				let e1', e2' = evalExp env true e1, evalExp' e2 in
 					assign e1' e2'
 						
-		| While (e, s) -> 
+		| While (e, s, t) -> 
 				let exp = evalExp' e in
 					(match exp with
 						| BooleanValue b -> if b then (
 																	evalState' s;
-																	let new_node = While(e,s) in
+																	let new_node = While(e, s, t) in
 																		evalState' new_node
 																) else
 																		()
 						| _ -> raise (Invalid_value ("Boolean expected: "^(string_of_ivalue exp)))
 					)
 					
-		| If_Else (e, s1, s2) -> 
+		| If_Else (e, s1, s2, _) -> 
 				let exp = evalExp' e in
 					(match exp with
 						| BooleanValue b -> if b then (
@@ -295,7 +282,7 @@ and evalState env s =
 						| _ -> raise (Invalid_value ("Boolean expected: "^(string_of_ivalue exp)))
 					)
 					
-		| If (e, s) -> 
+		| If (e, s, _) -> 
 				let exp = evalExp' e in
 					(match exp with
 						| BooleanValue(b) -> if b then (
@@ -305,18 +292,18 @@ and evalState env s =
 						| _ -> raise (Invalid_value ("Boolean expected: "^(string_of_ivalue exp)))
 					)
 					
-		| Write list -> 
+		| Write (list, _) -> 
 				List.iter (fun e -> 
 											let s = string_of_ivalue (evalExp' e) in
 												print_string s) list;
 												()
 		
-		| WriteLn list -> 
-				evalState' (Write list);
+		| WriteLn (list, t) -> 
+				evalState' (Write (list, t));
 				print_string "\n";
 				flush stdout
 		
-		| Seq (s1, s2) -> 
+		| Seq (s1, s2, _) -> 
 				evalState' s1;
 				evalState' s2
 		
@@ -334,7 +321,7 @@ and evalState env s =
 				evalState' (Read list);
 				clearBuffer()
 					
-		| CallProc (e, list) -> 
+		| CallProc (e, list, _) -> 
 				let exp = evalExp' e in
 				(match exp with
 				| ProcValue(listArgs, [consts;vars;opers], s, closure_env) -> 
@@ -362,7 +349,7 @@ and evalOpers env o =
 				ref_env := new_env;
 				(name, new_env)
 						
-	| Procedure(name, listArgs, decl, s) ->  
+	| Procedure(name, listArgs, decl, s, _) ->  
 			let ref_env = ref env in
 			let closure = ProcValue(listArgs, decl, s, ref_env) in
 			let new_env = assoc name closure env in
@@ -387,15 +374,13 @@ and evalAllDecls listArgs listExpr consts vars opers env =
   													let copy = (get_const_copy (evalExp' e1)) in
   														(s::prev_list, assoc s copy prev_env)
   										) ([], env) listArgs listExpr in
-  		hasDuplicates allArgs;
-  		(* criar consts *)
-  		let (allConsts, env_consts) = evalDecls args_env consts in
-  			(* criar vars *)
-  			let (allVars, env_vars) = evalDecls env_consts vars in
-  				(* criar opers *)
-  				let (allOpers, env_opers) = evalDecls env_vars opers in
-  					hasDuplicates (allConsts@allVars);
-  					env_opers
+		(* criar consts *)
+		let allConsts, env_consts = evalDecls args_env consts in
+		(* criar vars *)
+		let allVars, env_vars = evalDecls env_consts vars in
+		(* criar opers *)
+		let allOpers, env_opers = evalDecls env_vars opers in
+  		env_opers
 
 (* Funcao que avalia um bloco de declaracoes e retorna um env actualizado *)
 (* com as declaracoes *)
@@ -403,7 +388,7 @@ and evalDecls env d =
 	match d with
 	(* Verificar se nao existem duplicados e caso nao exista percorrer todas *)
 	(* as declaracoes e criar o novo ambiente *)
-	| Consts (list) -> 
+	| Consts (list, _) -> 
 			List.fold_left (fun (prev_consts, prev_env) (x,y) -> 
 														(x::prev_consts, assoc x (evalExp prev_env false y) prev_env)
 											) ([], env) list
@@ -411,7 +396,7 @@ and evalDecls env d =
 	(* Percorrer as varias listas e criar uma lista com todas as variaveis e *)
 	(* criar o novo ambiente, depois verificar se nao ha duplicados e se nao *)
 	(* houver retornar o ambiente com as variaveis inicializadas *)
-	| Vars (list) -> 
+	| Vars (list, _) -> 
 			List.fold_left (fun (prev_vars, prev_env) (t, l) -> 
 														let temp_env = 
 															List.fold_left (fun prev s -> 
@@ -422,7 +407,7 @@ and evalDecls env d =
 
 	(* Percorrer todas as declaracoes de funcoes e procedimentos e avaliar *)
 	(* cada declaracao e retornar o ambiente *)
-	| Operations (list) -> 
+	| Operations (list, _) -> 
 			List.fold_left (fun (prev_opers, prev_env) x ->
 														let (name, new_env) = evalOpers prev_env x in
 															(name::prev_opers, new_env)
@@ -441,7 +426,7 @@ let rec evalProgram p =
 		match p with
 			(* Avaliar cada parte do bloco das declaracoes, juntar tudo num env e *)
 			(* enviar para a avaliacao do corpo principal do programa *)
-			| Program(name, [consts; vars; opers], s) -> 
+			| Program(name, [consts; vars; opers], s, _) -> 
 					let env = evalAllDecls [] [] consts vars opers EnvMap.empty in
 					let _ = evalState env s in
 						()

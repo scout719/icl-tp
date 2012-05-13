@@ -2,15 +2,17 @@ open Blaise_parser
 open Blaise_syntax
 open Blaise_semantics
 open Blaise_compiler
+open Blaise_typechk
 
 let rec prompt lexbuf =
 (*	print_string "> " ;*)
 	flush stdout;
   try
   	let s = Blaise_parser.main Blaise_lexer.token lexbuf in
-			(*print_string ("Terminal:\n"); (evalProgram s); (print_string "\n");*)
-			compile_program s
-			(*prompt lexbuf*)
+			(* print_string ("Terminal:\n"); (evalProgram s); (print_string "\n"); *)
+			(* compile_program s *)
+			print_string (string_of_iType (get_type_program (typechk_program s)))
+			(* prompt lexbuf *)
   with
    	Parsing.Parse_error -> print_string "Parsing error\n"; (* prompt lexbuf *) 
 	| End_of_file -> ()
