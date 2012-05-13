@@ -63,3 +63,12 @@ _build/typechk/typechk.ml.depends
 main.byte
 _build/typechk/typechk.cmx
 _build/typechk/typechk.o
+_build/semantics/blaise_compiler.annot
+_build/semantics/blaise_compiler.cmi
+_build/semantics/blaise_compiler.cmo
+_build/semantics/blaise_compiler.cmx
+_build/semantics/blaise_compiler.ml
+_build/semantics/blaise_compiler.ml.depends
+_build/semantics/blaise_compiler.o
+semantics/blaise_compiler.ml
+

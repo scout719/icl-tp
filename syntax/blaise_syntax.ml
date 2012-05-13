@@ -60,3 +60,30 @@ and oper =
 
 type program = 
 	| Program of string * (decl_block list) * statement
+
+let get_iType e =
+	match e with
+  	| Number _ -> TNumber
+  	| String _ -> TString
+  	| Boolean _ -> TBoolean
+  	| Array (_, t) -> t
+  	| Record (_ , t) -> t
+  	| Add (_, _, t) -> t
+  	| Sub (_, _, t) -> t
+  	| Mult (_, _, t) -> t
+  	| Div (_, _, t) -> t
+  	| Compl (_, t) -> t
+  	| Mod (_, _, t) -> t
+  	| Eq (_, _, t) -> t
+  	| Neq (_, _, t) -> t
+  	| Gt (_, _, t) -> t
+  	| Lt (_, _, t) -> t
+  	| Gteq (_, _, t) -> t
+  	| Lteq (_, _, t) -> t
+  	| And (_, _, t) -> t
+  	| Or (_, _, t) -> t
+  	| Not (_, t) -> t
+  	| Id (_, t) -> t
+  	| GetArray (_, _, t) -> t
+  	| GetRecord (_, _, t) -> t
+  	| CallFun (_, _, t) -> t

@@ -206,17 +206,17 @@ let rec evalExp env lvalue e =
 		
 		| Gteq (e1, e2,_) -> 
 				let e1' = (toresult' (evalExp' e1)) in
-					let e2' = (toresult' (evalExp' e2)) in
-						let gt = gt_ivalue e1' e2' in
-							let eq = eq_ivalue e1' e2' in
-								or_ivalue gt eq
+				let e2' = (toresult' (evalExp' e2)) in
+				let gt = gt_ivalue e1' e2' in
+				let eq = eq_ivalue e1' e2' in
+					or_ivalue gt eq
 		
 		| Lteq (e1, e2,_) -> 
 				let e1' = (toresult' (evalExp' e1)) in
-					let e2' = (toresult' (evalExp' e2)) in
-						let lt = lt_ivalue e1' e2' in
-							let eq = eq_ivalue e1' e2' in
-								or_ivalue lt eq
+				let e2' = (toresult' (evalExp' e2)) in
+				let lt = lt_ivalue e1' e2' in
+				let eq = eq_ivalue e1' e2' in
+					or_ivalue lt eq
 		
 		| And (e1, e2,_) -> 
 				and_ivalue (toresult' (evalExp' e1)) (toresult' (evalExp' e2))
@@ -357,17 +357,17 @@ and evalOpers env o =
 	match o with
 	| Function(name, listArgs, decl, s, t) -> 
 			let ref_env = ref env in
-				let closure = FunValue(listArgs, decl, s, t, ref_env) in
-					let new_env = assoc name closure env in
-						ref_env := new_env;
-						(name, new_env)
+			let closure = FunValue(listArgs, decl, s, t, ref_env) in
+			let new_env = assoc name closure env in
+				ref_env := new_env;
+				(name, new_env)
 						
 	| Procedure(name, listArgs, decl, s) ->  
 			let ref_env = ref env in
-				let closure = ProcValue(listArgs, decl, s, ref_env) in
-					let new_env = assoc name closure env in
-						ref_env := new_env;
-						(name, new_env)
+			let closure = ProcValue(listArgs, decl, s, ref_env) in
+			let new_env = assoc name closure env in
+				ref_env := new_env;
+				(name, new_env)
 
 
 
@@ -443,7 +443,7 @@ let rec evalProgram p =
 			(* enviar para a avaliacao do corpo principal do programa *)
 			| Program(name, [consts; vars; opers], s) -> 
 					let env = evalAllDecls [] [] consts vars opers EnvMap.empty in
-						let _ = evalState env s in
-							()
+					let _ = evalState env s in
+						()
 									
 			| _ -> () (* dummy *)
