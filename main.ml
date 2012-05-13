@@ -3,6 +3,7 @@ open Blaise_syntax
 open Blaise_semantics
 open Blaise_compiler
 open Blaise_typechk
+open Blaise_iType
 
 let rec prompt lexbuf =
 (*	print_string "> " ;*)

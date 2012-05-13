@@ -307,7 +307,7 @@ and evalState env s =
 				evalState' s1;
 				evalState' s2
 		
-		| Read list -> 
+		| Read (list, _) -> 
 				List.iter (fun s -> let found = find s env in
 											(match found with
 												| RefValue r -> 
@@ -317,8 +317,8 @@ and evalState env s =
 											)
 									) list
 		
-		| ReadLn list -> 
-				evalState' (Read list);
+		| ReadLn (list, t) -> 
+				evalState' (Read (list, t));
 				clearBuffer()
 					
 		| CallProc (e, list, _) -> 

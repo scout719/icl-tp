@@ -1,4 +1,5 @@
 open Blaise_syntax
+open Blaise_iType
 
 module RecordMap = Map.Make (String)
 module EnvMap = Map.Make (String)
