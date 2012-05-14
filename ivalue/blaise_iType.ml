@@ -11,6 +11,11 @@ type iType =
 	| TNone
 	| TUndefined;;
 
+let rec unref_iType t =
+	match t with
+		| TRef r -> unref_iType !r
+		| t -> t
+
 let rec string_of_iType t =
 	match t with
   	| TNumber -> "Number"
@@ -87,15 +92,6 @@ let un_oper_record s t =
 		| TRecord list -> List.mem_assoc s list
 		| _ -> false;;
 
-let rec unref_record s t =
-	match t with
-		| TRecord list -> 
-						(try
-							List.assoc s list
-						with
-							| Not_found -> TNone)
-		| _ -> TNone;;
-
 let rec is_readable t =
 	match t with
 		| TRef r -> (match !r with
@@ -136,4 +132,7 @@ let rec get_reference_to t =
 
 		| TProc list -> 
 					TRef (ref (TProc list))
-		| _ -> TNumber;;  (** CHECK ***)
+		
+		| TRef r -> get_reference_to !r
+
+		| _ -> TNone;; (* dummy *)

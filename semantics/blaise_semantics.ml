@@ -324,12 +324,12 @@ and evalState env s =
 		| CallProc (e, list, _) -> 
 				let exp = evalExp' e in
 				(match exp with
-				| ProcValue(listArgs, [consts;vars;opers], s, closure_env) -> 
-						let new_env = evalAllDecls listArgs list consts vars opers env in
-							(* avaliar procedimento *)
-							evalState new_env s
-												
-				| _ -> raise (Invalid_value ("Proc expected: "^(string_of_ivalue exp)))
+  				| ProcValue(listArgs, [consts;vars;opers], s, closure_env) -> 
+  						let new_env = evalAllDecls listArgs list consts vars opers env in
+  							(* avaliar procedimento *)
+  							evalState new_env s
+  												
+  				| _ -> raise (Invalid_value ("Proc expected: "^(string_of_ivalue exp)))
 				)
 
 
@@ -402,7 +402,7 @@ and evalDecls env d =
 															List.fold_left (fun prev s -> 
 																										assoc s (RefValue(ref (defaultValue t))) prev
 																							) prev_env l in
-															(l@prev_vars, temp_env)
+															(l @ prev_vars, temp_env)
 											) ([], env) list
 
 	(* Percorrer todas as declaracoes de funcoes e procedimentos e avaliar *)
@@ -421,7 +421,7 @@ and evalDecls env d =
 
 (* Funcao que avalia um programa avaliando as declaracoes num novo ambiente *)
 (* e executa as instrucoes do corpo do programa *)
-let rec evalProgram p =
+let evalProgram p =
 	clearBuffer();
 		match p with
 			(* Avaliar cada parte do bloco das declaracoes, juntar tudo num env e *)

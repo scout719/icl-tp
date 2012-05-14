@@ -10,9 +10,10 @@ let rec prompt lexbuf =
 	flush stdout;
   try
   	let s = Blaise_parser.main Blaise_lexer.token lexbuf in
-			(* print_string ("Terminal:\n"); (evalProgram s); (print_string "\n"); *)
-			(* compile_program s *)
-			print_string (string_of_iType (get_type_program (typechk_program s)))
+			let p = typechk_program s in
+				(* print_string ("Terminal:\n"); (evalProgram s); (print_string "\n") *)
+				List.iter (fun s -> print_string (s ^ "\n")) (compile_program p)
+			(* print_string (string_of_iType (get_type_program (typechk_program s))) *)
 			(* prompt lexbuf *)
   with
    	Parsing.Parse_error -> print_string "Parsing error\n"; (* prompt lexbuf *) 

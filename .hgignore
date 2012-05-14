@@ -8,4 +8,6 @@ _build/*
 *.byte
 *.zip
 test
-
+*.il
+*.exe
+*.dll

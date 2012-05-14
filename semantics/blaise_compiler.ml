@@ -8,8 +8,6 @@ module StackframeMap = Map.Make (String);;
 
 (* dereferenciacao implicita *)
 (* compilar record e arrays *)
-(* vericar duplicados no typecheck *)
-(* Eq and Neq for strings*)
 
 (** ********************************************   COMPILER    ************************************************ *)
 
@@ -124,31 +122,20 @@ let footer = [	"ret";
 
 (** ******************************************** COMPILE OPERS ************************************************ *)
 
-let compile_add l r t =
-	match t with
-		| TNumber -> l @ unbox_int32 @ r @ unbox_int32 @ add
-		| TString -> l @ r @ string_concat
-		| _ -> [] (* dummy *);;
+let compile_bin_oper_str l r oper =
+	l @ r @ oper;;
 
-let compile_bin_oper_int l r t oper =
-	match t with
-		| TNumber -> l @ unbox_int32 @ r @ unbox_int32 @ oper
-		| _  -> [] (* dummy *);;
+let compile_bin_oper_int l r oper =
+	l @ unbox_int32 @ r @ unbox_int32 @ oper;;
 
-let compile_bin_oper_bool l r t oper =
-	match t with
-		| TBoolean -> l @ unbox_bool @ r @ unbox_bool @ oper
-		| _  -> [] (* dummy *);;
+let compile_bin_oper_bool l r oper =
+	l @ unbox_bool @ r @ unbox_bool @ oper;;
 
-let compile_un_oper_int e t oper =
-	match t with
-		| TNumber -> e @ unbox_int32 @ oper
-		| _  -> [] (* dummy *);;
+let compile_un_oper_int e oper =
+	e @ unbox_int32 @ oper;;
 
-let compile_un_oper_bool e t oper =
-	match t with
-		| TBoolean -> e @ unbox_bool @ oper
-		| _  -> [] (* dummy *);;
+let compile_un_oper_bool e oper =
+	e @ unbox_bool @ oper;;
 
 let write_type t =
 	match t with
@@ -157,6 +144,14 @@ let write_type t =
 		| TString -> print string
 		| TRecord _ -> print objecT
 		| TArray _ -> print objecT
+
+let compile_default_type t =
+	match t with
+		| TNumber -> ldc_int32 0
+		| TBoolean -> ldc_bool false
+		| TString -> ldstr ""
+		| TRecord _ -> ["ldnull"]
+		| TArray _ -> ["ldnull"]
 
 (** ******************************************** AUX FUNCTIONS ************************************************ *)
 
@@ -174,13 +169,7 @@ let next_label () =
 		label := curr + 1;
 		"L"^(string_of_int (curr));;
 
-let locals = ref [0];;
-
-let get_locals () =
-	try
-		List.nth !locals 0
-	with
-		| Failure _ -> 0;;
+let locals = ref [];;
 
 let inc_locals () =
 	match !locals with
@@ -198,40 +187,31 @@ let end_locals () =
 let begin_locals () =
 	locals := 0 :: (!locals);;
 
-let rec find_idx_rec f l i =
-	match l with
+let rec find_idx_rec f env i =
+	match env with
 		| [] -> raise Not_found
 		| x::xs -> if f x then
 								(x, i)
 							else find_idx_rec f xs (i+1);;
 
-let find_idx f l = 
-	find_idx_rec f l 0;;
+let find_idx f env = 
+	find_idx_rec f env 0;;
 
 let find s env =
-	let f = fun (sfL, c) -> List.mem_assoc s sfL in
-		let  sf, jumps = find_idx f env in
-			let offset = List.assoc s (fst sf) in
-				(jumps, offset);;
+	let f = fun (stackframe, _) -> StackframeMap.mem s stackframe in
+	let stack, jumps = find_idx f env in
+	let (offset, is_var) = StackframeMap.find s (fst stack) in
+		(jumps, offset, is_var);;
 
-let assoc x env =
-	(* if List.length env = 0 then ( 
-		let new_stackframe = StackframeMap.add x 0 StackframeMap.empty in
-			[(new_stackframe, ref 1)]
-	)else *)
+let assoc x env is_var =
 	let sf, count = List.hd env in
 	let new_count = !count + 1 in
-	let new_sf = StackframeMap.add x (new_count) sf in
+	let new_sf = StackframeMap.add x (new_count, is_var) sf in
 		count := new_count;
 		(new_sf, count) :: (List.tl env);;
 			
 let begin_scope env =
 	(StackframeMap.empty, ref 0) :: env;;
-	
-let end_scope env =
-	match env with
-		| [] -> []
-		| _::rest -> rest;;
 
 let rec get_jumps_list n list =
 	if n = 0 then
@@ -239,143 +219,178 @@ let rec get_jumps_list n list =
 	else
 		get_jumps_list (n - 1) (list @ (ldc 0) @ (stack_get));;
 
-let rec compile_expr env e =
-	let compile_expr' = compile_expr env in
+(** ******************************************** EXPR COMPILER ************************************************ *)
+
+let rec compile_expr env to_result e =
+	let compile_expr' = compile_expr env true in
 	match e with
-		| Number n -> (ldc_int32 n, [])
+		| Number n -> ldc_int32 n
 
-		| Boolean b -> (ldc_bool b, [])
+		| Boolean b -> ldc_bool b
 
-		| String s -> (ldstr s, [])
+		| String s -> ldstr s
 
-		| Add (l, r, t) -> 
-					let comp_l, list_l = compile_expr' l in
-					let comp_r, list_r = compile_expr' r in
-						(compile_add comp_l comp_r t , list_l @ list_r)
+		| Add (l, r, _) -> 
+					let comp_l = compile_expr' l in
+					let comp_r = compile_expr' r in
+					let type_l = get_type l in
+					let (operation, oper_code) = 
+								if type_l = TNumber then
+									(compile_bin_oper_int, add)
+								else
+									(compile_bin_oper_str, string_concat) in
+						operation comp_l comp_r oper_code
 		
-		| Sub (l, r, t) -> 
-					let comp_l, list_l = compile_expr' l in
-					let comp_r, list_r = compile_expr' r in
-						(compile_bin_oper_int comp_l comp_r t sub, list_l @ list_r)
+		| Sub (l, r, _) -> 
+					let comp_l = compile_expr' l in
+					let comp_r = compile_expr' r in
+						compile_bin_oper_int comp_l comp_r sub
 						
-		| Mult (l, r, t) -> 
-					let comp_l, list_l = compile_expr' l in
-					let comp_r, list_r = compile_expr' r in
-						(compile_bin_oper_int comp_l comp_r t mul, list_l @ list_r)
+		| Mult (l, r, _) -> 
+					let comp_l = compile_expr' l in
+					let comp_r = compile_expr' r in
+						compile_bin_oper_int comp_l comp_r mul
 						
-		| Div (l, r, t) -> 
-					let comp_l, list_l = compile_expr' l in
-					let comp_r, list_r = compile_expr' r in
-						(compile_bin_oper_int comp_l comp_r t div, list_l @ list_r)
+		| Div (l, r, _) -> 
+					let comp_l = compile_expr' l in
+					let comp_r = compile_expr' r in
+						compile_bin_oper_int comp_l comp_r div
 						
-		| Compl (e, t) -> 
-					let comp_e, list_e = compile_expr' e in
-					let comp_0, _ = compile_expr' (Number 0) in
-						(compile_bin_oper_int comp_0 comp_e t sub, list_e)
+		| Compl (e, _) -> 
+					let comp_e = compile_expr' e in
+					let comp_0 = compile_expr' (Number 0) in
+						compile_bin_oper_int comp_0 comp_e sub
 						
-		| Mod (l, r, t) -> 
-					let (comp_l, list_l) = compile_expr' l in
-					let (comp_r, list_r) = compile_expr' r in
-						(compile_bin_oper_int comp_l comp_r t rem, list_l @ list_r)
+		| Mod (l, r, _) -> 
+					let comp_l = compile_expr' l in
+					let comp_r = compile_expr' r in
+						compile_bin_oper_int comp_l comp_r rem
 						
-		| And (l, r, t) -> 
-					let comp_l, list_l = compile_expr' l in
-					let comp_r, list_r = compile_expr' r in
-						(compile_bin_oper_bool comp_l comp_r t anD, list_l @ list_r)
+		| And (l, r, _) -> 
+					let comp_l = compile_expr' l in
+					let comp_r = compile_expr' r in
+						compile_bin_oper_bool comp_l comp_r anD
 						
-		| Or (l, r, t) -> 
-					let comp_l, list_l = compile_expr' l in
-					let comp_r, list_r = compile_expr' r in
-						(compile_bin_oper_bool comp_l comp_r t oR, list_l @ list_r)
+		| Or (l, r, _) -> 
+					let comp_l = compile_expr' l in
+					let comp_r = compile_expr' r in
+						compile_bin_oper_bool comp_l comp_r oR
 						
-		| Not (e, t) -> 
-					let comp_e, list_e = compile_expr' e in
-						(compile_un_oper_bool comp_e t noT, list_e)
+		| Not (e, _) -> 
+					let comp_e = compile_expr' e in
+						compile_un_oper_bool comp_e noT
 						
-		| Eq (l, r, t) -> 
-					let comp_l, list_l = compile_expr' l in
-					let comp_r, list_r = compile_expr' r in
-						(compile_bin_oper_bool comp_l comp_r t eq, list_l @ list_r)
+		| Eq (l, r, _) -> 
+					let comp_l = compile_expr' l in
+					let comp_r = compile_expr' r in
+					let type_l = get_type l in
+					let operation = 
+								if type_l = TBoolean then
+									compile_bin_oper_bool
+								else
+									compile_bin_oper_int in
+						operation comp_l comp_r eq
 						
-		| Gt (l, r, t) -> 
-					let comp_l, list_l = compile_expr' l in
-					let comp_r, list_r = compile_expr' r in
-						(compile_bin_oper_bool comp_l comp_r t gt, list_l @ list_r)
+		| Gt (l, r, _) -> 
+					let comp_l = compile_expr' l in
+					let comp_r = compile_expr' r in
+					let type_l = get_type l in
+					let operation = 
+								if type_l = TBoolean then
+									compile_bin_oper_bool
+								else
+									compile_bin_oper_int in
+						operation comp_l comp_r gt
 						
-		| Lt (l, r, t) -> 
-					let comp_l, list_l = compile_expr' l in
-					let comp_r, list_r = compile_expr' r in
-						(compile_bin_oper_bool comp_l comp_r t lt, list_l @ list_r)
+		| Lt (l, r, _) -> 
+					let comp_l = compile_expr' l in
+					let comp_r = compile_expr' r in
+					let type_l = get_type l in
+					let operation = 
+								if type_l = TBoolean then
+									compile_bin_oper_bool
+								else
+									compile_bin_oper_int in
+						operation comp_l comp_r lt
 						
-		| Gteq (l, r, t) -> 
-					let comp_l, list_l = compile_expr' l in
-					let comp_r, list_r = compile_expr' r in
-					let comp_gt = compile_bin_oper_bool comp_l comp_r t gt in
-					let comp_eq = compile_bin_oper_bool comp_l comp_r t eq in
-						(compile_bin_oper_bool comp_gt comp_eq t oR, list_l @ list_r)
+		| Gteq (l, r, _) -> 
+					let comp_l = compile_expr' l in
+					let comp_r = compile_expr' r in
+					let type_l = get_type l in
+					let operation = 
+								if type_l = TBoolean then
+									compile_bin_oper_bool
+								else
+									compile_bin_oper_int in
+					let comp_gt = operation comp_l comp_r gt in
+					let comp_eq = operation comp_l comp_r eq in
+						compile_bin_oper_bool comp_gt comp_eq oR
 						
-		| Lteq (l, r, t) -> 
-					let comp_l, list_l = compile_expr' l in
-					let comp_r, list_r = compile_expr' r in
-					let comp_lt = compile_bin_oper_bool comp_l comp_r t lt in
-					let comp_eq = compile_bin_oper_bool comp_l comp_r t eq in
-						(compile_bin_oper_bool comp_lt comp_eq t oR, list_l @ list_r)
+		| Lteq (l, r, _) -> 
+					let comp_l = compile_expr' l in
+					let comp_r = compile_expr' r in
+					let type_l = get_type l in
+					let operation = 
+								if type_l = TBoolean then
+									compile_bin_oper_bool
+								else
+									compile_bin_oper_int in
+					let comp_lt = operation comp_l comp_r lt in
+					let comp_eq = operation comp_l comp_r eq in
+						compile_bin_oper_bool comp_lt comp_eq oR
 						
-		| Neq (l, r, t) -> 
-					let comp_l, list_l = compile_expr' l in
-					let comp_r, list_r = compile_expr' r in
-					let comp_eq = compile_bin_oper_bool comp_l comp_r t eq in
-						(compile_un_oper_bool comp_eq t noT, list_l @ list_r)
+		| Neq (l, r, _) -> 
+					let comp_l = compile_expr' l in
+					let comp_r = compile_expr' r in
+					let type_l = get_type l in
+					let operation_eq = 
+        				if type_l = TBoolean then
+									compile_bin_oper_bool
+								else
+									compile_bin_oper_int in
+					let comp_eq = operation_eq comp_l comp_r eq in
+						compile_un_oper_bool comp_eq noT
 
 		| Id (s, _)  -> 
-					let jumps, offset = find s env in
+					let jumps, offset, is_var = find s env in
 					let jump_comp = get_jumps_list jumps [] in
-						(ldloc_stackframe @ jump_comp @ (ldc offset) @ stack_get, [])
+					let deref = 
+							if is_var && to_result then
+								cell_get
+							else
+								[] in
+								
+						ldloc_stackframe @ jump_comp @ (ldc offset) @ stack_get @ deref
 
 		| CallFun(e, list, _) -> 
-				let comp_e, list_e = compile_expr' e in
-				let (args_comp, args_list, last_index) = 
-					List.fold_left( fun (prev_args, prev_list, prev_index) e ->
-															let (comp_e, list_e) = compile_expr' e in
-															let new_args_comp = 
-																dup @ 
-																(ldc prev_index) @ 
-																comp_e @ 
-																stack_set @ 
-																prev_args in
-															let new_list = prev_list @ list_e in
-															let new_index = prev_index + 1 in
-																(new_args_comp, new_list, new_index)
-																							) ([],[], 1) list in
-				let comp_fun = 
-					comp_e @ 
-					dup @ 
-					closure_get_SF @ 
-					new_stack @ 
-					dup @ 
-					(ldc (last_index - 1)) @ 
-					stack_init_args @ 
-					args_comp @ 
-					swap @ 
-					closure_get_Ftn @ 
-					call_fun in
-						(comp_fun, list_e @ args_list)
+    			let comp_e = compile_expr' e in
+    			let (args_comp, last_index) = 
+    				List.fold_left( fun (prev_args, prev_index) e ->
+    						let comp_e = compile_expr' e in
+    						let new_args_comp = 
+    							dup @ 
+    							(ldc prev_index) @ 
+    							comp_e @ 
+    							stack_set @ 
+    							prev_args in
+    						let new_index = prev_index + 1 in
+    							(new_args_comp, new_index)
+    											) ([], 1) list in
+    				comp_e @ 
+    				dup @ 
+    				closure_get_SF @ 
+    				new_stack @ 
+    				dup @ 
+    				(ldc (last_index - 1)) @ 
+    				stack_init_args @ 
+    				args_comp @ 
+    				swap @ 
+    				closure_get_Ftn @ 
+    				call_fun
+		
+		| _ -> []
 														
-(*		| Var (e1, _) -> let (s , f) = code_genAux' e1 in
-											(s@newObject, f)
-
-		| Deref (e1, _) -> let (s , f) = code_genAux' e1 in
-											(s@cellGet, f)
-
-		| Id (s, _)  -> let (jumps, offset) = find s env in
-											let jump_comp = getJumps jumps in
-												((ldloc stackframe)@(jump_comp)@(ldc offset)@stackGet, [])
-												
-		| Do (s, e, _) -> let (s1, f1) = code_genStateAux env s in
-												let (s2, f2) = code_genAux' e in
-													(s1@s2, f1@f2)
-													
-		| DeclE(list, e, _) ->
+(*	| DeclE(list, e, _) ->
 											let new_env = List.fold_left (fun prev (x,_) -> incLocals(); assoc x prev) env list in
 													let (declarations, opers) = List.fold_left (
 																fun (prev_decl, prev_f) (x,y) -> let (_, addr) = find x new_env in
@@ -396,18 +411,6 @@ let rec compile_expr env e =
 							let declProc = (preambleProc numLocals)@sE@footerProc in
 								((ldloc stackframe)@(ldftnProc n)@newClosure, declProc@f)
 								
-		| Fun(list, e, _) -> 
-				let n = freshIdentifier () in
-					let tmp_env = beginScope env in
-						beginLocals();
-						let new_env = List.fold_left (fun prev_env s ->	
-																						assoc s prev_env
-																				) tmp_env list in
-							let (sE, f) = code_genAux new_env e in
-							let numLocals = endLocals() in
-							let declProc = (preambleFun numLocals)@sE@footerFun in
-								((ldloc stackframe)@(ldftnFun n)@newClosure, declProc@f)
-								
 		| CallF(e, list, _) -> 
 				let (s1, f1) = code_genAux' e in
 				let (declList, fList, length) = List.fold_left( fun (prevDecl, prevF, prevIndex) e	-> 
@@ -419,73 +422,211 @@ let rec compile_expr env e =
 				
 				
 		*)
-									
+
+(** ******************************************** STAT COMPILER ************************************************ *)
 
 and compile_stat env s =
-	let compile_expr' = compile_expr env in
+	let compile_expr' = compile_expr env true in
 	let compile_stat' = compile_stat env in	
 	match s with
+		| Assign (l, r, _) ->
+					let comp_l = compile_expr env false l in
+					let comp_r = compile_expr' r in
+						comp_l @ comp_r @ cell_set
+
 		| Seq(l, r, _) ->
-					let comp_l, list_l = compile_stat' l in
-					let comp_r, list_r = compile_stat' r in
-						(comp_l @ comp_r, list_l @ list_r)
+					let comp_l = compile_stat' l in
+					let comp_r = compile_stat' r in
+						comp_l @ comp_r
 						
 		| If(e, s, _) -> 
 					let label = next_label () in
-					let comp_e, list_e = compile_expr' e in
-					let comp_s, list_s = compile_stat' s in
-						(comp_e @ unbox_bool @ (brfalse label) 
-										@ comp_s @ (nop label), list_e @ list_s)
+					let comp_e = compile_expr' e in
+					let comp_s = compile_stat' s in
+						comp_e @ unbox_bool @ (brfalse label) @ comp_s @ (nop label)
 					
 		| If_Else(e, s1, s2, _) -> 
 					let label1 = next_label () in
 					let label2 = next_label () in
-					let comp_e, list_e = compile_expr' e in
-					let comp_s1, list_s1 = compile_stat' s1 in
-					let comp_s2, list_s2 = compile_stat' s2 in
-						(comp_e @ unbox_bool @ (brfalse label1) 
+					let comp_e = compile_expr' e in
+					let comp_s1 = compile_stat' s1 in
+					let comp_s2 = compile_stat' s2 in
+						comp_e @ unbox_bool @ (brfalse label1) 
 										@ comp_s1 @ (br label2) 
 						@ (nop label1) 
-										@ comp_s2 @ (nop label2), list_e @ list_s1 @ list_s2)
+										@ comp_s2 @ (nop label2)
 
 		| While(e, s, _) -> 
 					let label1 = next_label () in
 					let label2 = next_label () in
-					let comp_e, list_e = compile_expr' e in
-					let comp_s, list_s = compile_stat' s in
-						((nop label1) @ comp_e @ unbox_bool @ (brfalse label2)
-													@ comp_s @ (br label1) @ (nop label2), 
-																															list_e @ list_s)
+					let comp_e = compile_expr' e in
+					let comp_s = compile_stat' s in
+						(	nop label1) @
+							comp_e @ 
+							unbox_bool @ 
+							(brfalse label2) @ 
+									comp_s @ 
+							(br label1) @ 
+							(nop label2)
 		
 		| Write (list, _) -> 
-					List.fold_left (fun (prev_comp, prev_list) e -> 
-														let t = get_type e in
-														let (comp_e, list_e) = compile_expr' e in
-														let comp_print = comp_e @ (write_type t) in
-															(prev_comp @ comp_print, prev_list @ list_e)) ([], []) list
-	(*												
-		| If(e1, s1, s2, _) -> let label1 = "L"^(string_of_int (nextLabel())) in
-														let label2 = "L"^(string_of_int (nextLabel())) in
-														let (s1c, f1) = code_genAux' e1 in
-														let (s2c, f2) = code_genStateAux' s1 in
-														let (s3c, f3) = code_genStateAux' s2 in
-															(s1c@unboxBool@(brfalse label1)@s2c@(br label2)@[label1^": nop"]@s3c@[label2^": nop"], f1@f2@f3)
+					List.fold_left (fun prev_comp e -> 
+							let t = unref_iType (get_type e) in
+							let comp_e = compile_expr' e in
+							let comp_print = comp_e @ (write_type t) in
+								prev_comp @ comp_print
+													) [] list
+		
+		| WriteLn (list, t) -> 
+					let comp_write = compile_stat' (Write (list, t)) in
+					let print_ln = ("ldstr \"\n\"") :: (print "class System.String") in
+						comp_write @ print_ln
 
-		| While(e1, s1, _) -> let label1 = "L"^(string_of_int (nextLabel())) in
-													let label2 = "L"^(string_of_int (nextLabel())) in
-													let (s1c, f1) = code_genAux' e1 in
-													let (s2c, f2) = code_genStateAux' s1 in
-														([label1^": nop"]@s1c@unboxBool@(brfalse label2)@s2c@(br label1)@[label2^": nop"], f1@f2)
-														
-		| Assign(e1, e2, _) -> let (se1, f1) = code_genAux' e1 in
-														let (se2, f2) = code_genAux' e2 in
-															(se1@se2@cellSet, f1@f2)
-															
-		| Print (e1, _) -> let (s, f) = code_genAux' e1 in
-													(s@(print "object"), f)
-		| Println -> (("ldstr \"\n\"")::(print "class System.String"), [])
+		| CallProc (e, list, _) -> 
+					let closure = compile_expr' e in
+					let args_comp, num_args = 
+							List.fold_left (fun (prev_comp, prev_index) e ->
+									let comp_e = compile_expr' e in
+									let new_index = prev_index + 1 in
+									let new_comp = 
+										dup @ (ldc new_index) @ comp_e @ stack_set @ prev_comp in
+									(new_comp, new_index)
+														) ([], 0) list in
+					closure @ 
+          dup @
+          closure_get_SF @
+          new_stack @ 
+          dup @ 
+          (ldc num_args) @ 
+          stack_init_args @ 
+          args_comp @ 
+          swap @ 
+          closure_get_Ftn @ 
+          call_proc;;
 
-		| DeclS(list, e, _) ->
+let rec compile_oper env o =
+	match o with
+		| Function (name, args_list, [consts; vars; opers], s, _) -> 
+					let id = fresh_identifier () in
+					let new_env = begin_scope env in
+					begin_locals ();
+					let oper_env = 
+							List.fold_left 	(fun prev_env (s, _) -> assoc s prev_env false
+															) new_env args_list in
+					inc_locals ();
+					let recursive_env = assoc name oper_env false in
+					let decl_comp, decl_list, decl_env = compile_all_decls consts vars opers recursive_env in
+					let temp_env = assoc "result" decl_env true in
+					let comp_s = compile_stat temp_env s in
+					let comp_closure = ldloc_stackframe @ (ldftn_fun id) @ new_closure in
+					let _ , recursive_addr, _ = find name decl_env in
+					let recursive_comp = ldloc_stackframe @ (ldc recursive_addr) @ comp_closure @ stack_set in
+					let num_locals = end_locals () in
+					let _, result_addr, _ = find "result" temp_env in
+					let get_result = ldloc_stackframe @ (ldc result_addr) @ stack_get in
+					let comp_fun = (preamble_fun id num_locals) @ recursive_comp @ comp_s @ get_result @ footer in
+					inc_locals ();
+					let fun_env = assoc name env false in
+					let _ , addr, _ = find name fun_env in
+					let new_comp = ldloc_stackframe @ (ldc addr) @ comp_closure @ stack_set in
+						(new_comp, comp_fun, fun_env)
+
+		| Procedure (name, args_list, [consts; vars; opers], s, _) -> 
+					let id = fresh_identifier () in
+					let new_env = begin_scope env in
+					begin_locals ();
+					let oper_env = 
+							List.fold_left 	(fun prev_env (s, _) -> assoc s prev_env false
+															) new_env args_list in
+					inc_locals ();
+					let recursive_env = assoc name oper_env false in
+					let decl_comp, decl_list, decl_env = compile_all_decls consts vars opers recursive_env in
+					let comp_s = compile_stat decl_env s in
+					let comp_closure = ldloc_stackframe @ (ldftn_proc id) @ new_closure in
+					let _ , recursive_addr, _ = find name decl_env in
+					let recursive_comp = ldloc_stackframe @ (ldc recursive_addr) @ comp_closure @ stack_set in
+					let num_locals = end_locals () in
+					let comp_proc = (preamble_proc id num_locals) @ recursive_comp @ comp_s @ footer in
+					inc_locals ();
+					let proc_env = assoc name env false in
+					let _ , addr, _ = find name proc_env in
+					let new_comp = ldloc_stackframe @ (ldc addr) @ comp_closure @ stack_set in
+						(new_comp, comp_proc, proc_env)
+
+		| _ -> ([], [] ,[]) (* dummy *)
+
+and compile_decl env d =
+	match d with
+		| Vars (list, _) ->
+					let (vars_comp, vars_env) = 
+						List.fold_left ( fun 	(prev_comp, prev_env) (t, list2) ->
+								List.fold_left ( fun (prev_comp, prev_env) s -> 
+										inc_locals ();
+										let new_env = assoc s prev_env true in
+										let _, addr, _ = find s new_env in
+										let default_comp = compile_default_type t in
+										let new_comp = prev_comp @ (ldloc_stackframe) @ (ldc addr) @ default_comp @ new_cell @ stack_set in
+											(new_comp, new_env)
+																) (prev_comp, prev_env) list2
+													) ([], env) list in
+						(vars_comp, [], vars_env)
+		
+		| Consts (list, _) ->
+					let (consts_comp, consts_env) =
+						List.fold_left ( fun 	(prev_comp, prev_env) (s, e) ->
+									inc_locals ();
+									let new_env = assoc s prev_env false in
+									let _, addr, _ = find s new_env in
+									let comp_e = compile_expr env true e in
+									let new_comp = prev_comp @ (ldloc_stackframe) @ (ldc addr) @ comp_e @ stack_set in
+										(new_comp, new_env)
+												) ([], env) list in
+						(consts_comp, [], consts_env)
+
+		| Operations (list, _) -> 
+					List.fold_left ( fun 	(prev_comp, prev_list, prev_env) o ->
+								let oper_comp, oper_list, oper_env = compile_oper prev_env o in
+								 (prev_comp @ oper_comp, prev_list @ oper_list, oper_env)
+													) ([], [], env) list
+
+and compile_all_decls consts vars opers env =
+	let (consts_comp, _, consts_env) = compile_decl env consts in
+	let (vars_comp, _, vars_env) = compile_decl consts_env vars in
+	let (opers_comp, opers_list, opers_env) = compile_decl vars_env opers in
+		consts_comp @ vars_comp @ opers_comp, opers_list, opers_env
+
+let rec optimize comp =
+	comp;;
+
+let compile_program p =
+	match p with
+		| Program (name, [consts; vars; opers], s, _) ->
+					let env = begin_scope [] in
+					begin_locals ();
+					let decl_comp, decl_list, decl_env = compile_all_decls consts vars opers env in
+					let comp_s = compile_stat decl_env s in
+					let all_comp = decl_comp @ comp_s in
+					let optimized_s = optimize all_comp in
+					let optimized_opers = optimize decl_list in
+					let num_locals = end_locals () in
+						(preamble num_locals)@ optimized_s @ footer @ optimized_opers
+		| _ -> [] (* dummy *);;
+(*	
+		
+								
+		| Fun(list, e, _) -> 
+				let n = freshIdentifier () in
+					let tmp_env = beginScope env in
+						beginLocals();
+						let new_env = List.fold_left (fun c_str ""prev_env s ->	
+																						assoc s prev_env
+																				) tmp_env list in
+							let (sE, f) = code_genAux new_env e in
+							let numLocals = endLocals() in
+							let declProc = (preambleFun numLocals)@sE@footerFun in
+								((ldloc stackframe)@(ldftnFun n)@newClosure, declProc@f)
+								
+	 | DeclS(list, e, _) ->
 											let new_env = List.fold_left (fun prev (x,_) -> incLocals(); assoc x prev) env list in
 													let (declarations, opers) = List.fold_left (
 																fun (prev_decl, prev_f) (x,y) -> let (_, addr) = find x new_env in
@@ -515,6 +656,3 @@ let code_gen e =
 		raise TypeCheckFailed*)
 		
 		*)
-		
-let compile_program p =
-	print_string "Hello World! xP";;

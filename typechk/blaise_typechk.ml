@@ -35,7 +35,6 @@ let to_result t =
 		| _ -> t;;
 
 let rec check_assign l r =
-	print_string ("Left: "^(string_of_iType l)^" Right: "^(string_of_iType r)^"\n" );
 	match l with
 		| TRef lr -> 
 				( match !lr, r with
@@ -70,6 +69,12 @@ let rec check_assign l r =
 										TUnit
 									else
 										TNone
+					
+					| _, TRef r2 -> 
+								if !lr = !r2 then
+									TUnit
+								else
+									TNone
 										
 					| tl, tr -> 
 								if tl = (to_result tr) then
@@ -259,7 +264,6 @@ let rec typechk_exp env e =
 		| CallFun(e, args_list, _) ->
 					let e' = typechk_exp' e in
 					let t = to_result (get_type e') in
-					print_string (string_of_iType t);
 					let args_list' = 
 								List.map( fun e -> typechk_exp' e) args_list in
 						(match t with
