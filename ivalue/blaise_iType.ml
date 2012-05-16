@@ -14,7 +14,12 @@ type iType =
 let rec unref_iType t =
 	match t with
 		| TRef r -> unref_iType !r
-		| t -> t
+		| t -> t;;
+
+let is_var t =
+	match t with
+		| TRef _ -> true
+		| _ -> false;;
 
 let rec string_of_iType t =
 	match t with
@@ -50,7 +55,7 @@ let get_type_of_record s t =
 						List.assoc s list
 					with
 						| Not_found -> TNone)
-		| _ -> TNone
+		| _ -> TNone;;
 
 let bin_oper_int t1 t2 =
 	match t1, t2 with
@@ -100,14 +105,14 @@ let rec is_readable t =
 									| TBoolean -> true
 									| _ -> false
 								)
-		| _ -> false
+		| _ -> false;;
 
 let rec is_writable t =
 	match t with
 		| TNumber -> true
 		| TString -> true
 		| TBoolean -> true
-		| _ -> false
+		| _ -> false;;
 
 let rec get_reference_to t =
 	match t with

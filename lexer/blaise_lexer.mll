@@ -24,7 +24,7 @@ let  string_constant = '"' string_char* '"'
 let  block_comment_char = escape_char | ['\000' - '\034'] | ['\036' - '\122'] | '\124' | ['\126' - '\127']
 let  inline_comment_char = escape_char | ['\000' - '\009'] | ['\014' - '\127']
 
-let  block_comment = "{##" (block_comment_char | "##" (block_comment_char | "#") | "}" | "#")* "##}"
+let  block_comment = "{##" (block_comment_char | "##" (block_comment_char | "#") | "}" | "#" | "{")* "##}"
 let  inline_comment = "/##" (inline_comment_char)* ['\010' - '\013']
 
 

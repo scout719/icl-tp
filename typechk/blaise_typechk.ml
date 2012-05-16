@@ -40,14 +40,14 @@ let rec check_assign l r =
 				( match !lr, r with
 					| TArray (length1, t1), TArray (length2, t2) -> 
 								if length1 = length2 then 
-									check_assign t1 (to_result t2)
+									check_assign t1 t2
 								else
 									TNone
 
 					| TRecord (list1), TRecord (list2) -> 
 								List.fold_left2 ( fun prev_type (s1, t1) (s2, t2) ->
 																			if prev_type = TUnit && s1 = s2 then
-																				check_assign t1 (to_result t2)
+																				check_assign t1 t2
 																			else
 																				TNone
 																) TUnit list1 list2
@@ -69,12 +69,6 @@ let rec check_assign l r =
 										TUnit
 									else
 										TNone
-					
-					| _, TRef r2 -> 
-								if !lr = !r2 then
-									TUnit
-								else
-									TNone
 										
 					| tl, tr -> 
 								if tl = (to_result tr) then
@@ -370,13 +364,8 @@ let rec typechk_stat env s =
   							| _ -> CallProc(e', args_list', TNone)
   						)
 						
-and typechk_all_decls env args_list consts vars opers =
-		let all_args, new_env = List.fold_left (
-																	fun (prev_args, prev_env) (s, t) -> 
-																			(prev_args @ [s], assoc s t prev_env)
-																					) ([], env) args_list in
-			check_duplicates all_args;
-			let all_consts ,consts', env_consts = typechk_decl new_env consts in
+and typechk_all_decls env consts vars opers =
+			let all_consts ,consts', env_consts = typechk_decl env consts in
 			let all_vars, vars', env_vars = typechk_decl env_consts vars in
 			let all_opers, opers', env_opers = typechk_decl env_vars opers in
 				check_duplicates (all_consts @ all_vars @ all_opers);
@@ -393,18 +382,27 @@ and typechk_all_decls env args_list consts vars opers =
 and typechk_oper env o =
 	match o with
 		| Function (name, args_list, [consts; vars; opers],  s, t) -> 
-					let decl_block, temp_env, decl_type = typechk_all_decls env args_list consts vars opers in
+      		let all_args, new_env = List.fold_left (
+      																	fun (prev_args, prev_env) (s, t) -> 
+      																			(prev_args @ [s], assoc s t prev_env)
+      																					) ([], env) args_list in
+      			check_duplicates all_args;
+					let decl_block, temp_env, decl_type = typechk_all_decls new_env consts vars opers in
 					let args_type_list = List.map (fun (_, t) -> t) args_list in
-					let return_type_ref = ref t in
 					let recursive_env = assoc name (TFun ( args_type_list, t)) temp_env in
-					let new_env = assoc "result" (TRef(return_type_ref)) recursive_env in
+					let new_env = assoc "result" (TRef(ref t)) recursive_env in
 					let s' = typechk_stat new_env s in
 					let fun_type = if (get_type_stat s') = TUnit then t else TNone in
 					let final_env = assoc name (TFun ( args_type_list, fun_type)) env in
 						(name, Function (name, args_list, decl_block, s', fun_type), final_env)
 		
 		| Procedure (name, args_list, [consts; vars; opers], s, _) -> 
-					let decl_block, temp_env, decl_type = typechk_all_decls env args_list consts vars opers in
+      		let all_args, new_env = List.fold_left (
+      																	fun (prev_args, prev_env) (s, t) -> 
+      																			(prev_args @ [s], assoc s t prev_env)
+      																					) ([], env) args_list in
+      			check_duplicates all_args;
+					let decl_block, temp_env, decl_type = typechk_all_decls new_env consts vars opers in
 					let args_type_list = List.map (fun (_, t) -> t) args_list in
 					let recursive_env = assoc name TUnit temp_env in
 					let s' = typechk_stat recursive_env s in
@@ -454,7 +452,7 @@ and typechk_decl env d =
 let typechk_program p =
 	match p with
 		| Program(name, [consts; vars; opers], s, _) -> 
-				let decl_block , env, decl_type = typechk_all_decls TypeEnvMap.empty [] consts vars opers in
+				let decl_block , env, decl_type = typechk_all_decls TypeEnvMap.empty consts vars opers in
 				let s' = typechk_stat env s in
 				let t = get_type_stat s' in
 					if decl_type <> TNone && t <> TNone then

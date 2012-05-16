@@ -11,3 +11,4 @@ test
 *.il
 *.exe
 *.dll
+tests/
