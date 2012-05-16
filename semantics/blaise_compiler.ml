@@ -75,6 +75,7 @@ let print typE = ["call void class[mscorlib]System.Console::Write("^typE^")"];;
 let new_cell =  ["newobj instance void [Runtime]Cell::.ctor(object)"];;
 let cell_get =  ["callvirt instance object [Runtime]Cell::get()"];;
 let cell_set =  ["callvirt instance void [Runtime]Cell::set(object)"];;
+let cell_copy =  ["callvirt instance object [Runtime]Cell::getCopy()"];;
 let new_stack =  ["newobj instance void [Runtime]StackFrame::.ctor(object)"];;
 let stack_get = ["callvirt instance object [Runtime]StackFrame::get(int32)"];;
 let stack_set = ["callvirt instance void [Runtime]StackFrame::set(int32, object)"];;
@@ -83,12 +84,15 @@ let stack_init_args = ["callvirt instance void [Runtime]StackFrame::initArgs(int
 let new_closure = ["newobj instance void [Runtime]Closure::.ctor(class [Runtime]StackFrame,native int)"];;
 let closure_get_SF = ["callvirt instance class [Runtime]StackFrame [Runtime]Closure::getSF()"];;
 let closure_get_Ftn = ["callvirt instance native int [Runtime]Closure::getFtn()"];;
-let new_record = ["newobj instance void [Record]Record::.ctor()"];;
-let record_get = ["callvirt instance object [Record]Record::GetValue(string)"];;
-let record_set = ["callvirt instance void [Record]Record::SetValue(string, object)"];;
-let new_array = ["newobj instance void [Array]Array::.ctor(int32, object)"];;
-let array_get = ["callvirt instance object [Array]Array::Get(int32)"];;
-let array_set = ["callvirt instance void [Array]Array::Set(int32, object)"];;
+let closure_copy = ["callvirt instance object [Runtime]Closure::getCopy()"];;
+let new_record = ["newobj instance void [Runtime]Record::.ctor()"];;
+let record_get = ["callvirt instance object [Runtime]Record::GetValue(string)"];;
+let record_set = ["callvirt instance void [Runtime]Record::SetValue(string, object)"];;
+let record_copy = ["callvirt instance object [Runtime]Record::getCopy()"];;
+let new_array = ["newobj instance void [Runtime]Array::.ctor(int32, object)"];;
+let array_get = ["callvirt instance object [Runtime]Array::Get(int32)"];;
+let array_set = ["callvirt instance void [Runtime]Array::Set(int32, object)"];;
+let array_copy = ["callvirt instance object [Runtime]Array::getCopy()"];;
 
 (** ******************************************** PREAMBLES/FOOTERS ******************************************** *)
 
@@ -150,15 +154,14 @@ let write_type t =
 		| TNumber -> unbox_int32 @ (print int32)
 		| TBoolean -> unbox_bool @ (print bool)
 		| TString -> print string
-		| TRecord _ -> print objecT
-		| TArray _ -> print objecT
+		| _ -> [] (* dummy *);;
 
 let rec compile_default_type t =
 	match t with
 		| TNumber -> (ldc_int32 0) @ new_cell
 		| TBoolean -> (ldc_bool false) @ new_cell
 		| TString ->  (ldstr "") @ new_cell
-		| TRecord list -> 
+		| TRecord list ->  
 					let comp_set_record = 
 							List.fold_left (fun prev_comp (s, t) ->
 								let comp_t = compile_default_type t in
@@ -170,6 +173,30 @@ let rec compile_default_type t =
 		| TArray (length , t) -> 
 					let comp_t = compile_default_type t in
 						(ldc length) @ comp_t @ new_array @ new_cell
+
+  	| TFun (list, _) -> ["ldnull"] @ (ldc 0) @ new_closure
+
+  	| TProc list -> ["ldnull"] @ (ldc 0) @ new_closure
+		
+		| _ -> [] (* dummy *);;
+
+let rec compile_assign t1 t2 =
+	match t1 with
+		| TRef(r1) ->	
+					( match !r1, t2 with
+							| _, TRecord _ ->
+										record_copy @ cell_set
+							| _, TArray _ ->
+										array_copy @ cell_set
+							| _, TFun _ ->
+										closure_copy @ cell_set
+							| _, TProc _ ->
+										closure_copy @ cell_set
+							| _ -> 
+										cell_set
+					)
+		| _ -> [];; (* dummy *)
+		
 
 (** ******************************************** AUX FUNCTIONS ************************************************ *)
 
@@ -448,7 +475,10 @@ and compile_stat env s =
 		| Assign (l, r, _) ->
 					let comp_l = compile_expr env false l in
 					let comp_r = compile_expr' r in
-						comp_l @ comp_r @ cell_set
+					let l_type = get_type l in
+					let r_type = unref_iType (get_type r) in
+					let comp_assign = compile_assign l_type r_type in
+						comp_l @ comp_r @ comp_assign
 
 		| Seq(l, r, _) ->
 					let comp_l = compile_stat' l in
@@ -497,6 +527,9 @@ and compile_stat env s =
 					let comp_write = compile_stat' (Write (list, t)) in
 					let print_ln = ("ldstr \"\n\"") :: (print "class System.String") in
 						comp_write @ print_ln
+
+		| Read list, _ ->
+					
 
 		| CallProc (e, list, _) -> 
 					let closure = compile_expr' e in

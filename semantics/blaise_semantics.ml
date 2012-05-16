@@ -76,27 +76,6 @@ let toresult lvalue value =
 					
 			| _ -> value
 
-(* Funcao que retorna uma copia nao mutavel do valor v *)
-let rec get_const_copy v =
-	match v with
-	| RefValue r -> get_const_copy !r
-
-	| ArrayValue array -> 
-			let length = Array.length array in
-				let new_array = Array.init length (fun i -> 
-																							let elem = Array.get array i in
-																								get_const_copy elem
-																					) in
-					ArrayValue new_array
-	
-	| RecordValue record -> 
-			let new_record = RecordMap.fold (fun k v prev -> 
-																						RecordMap.add k (get_const_copy v) prev
-																			) record RecordMap.empty in
-				RecordValue(new_record)
-	
-	| _ -> v
-
 (* Funcao auxiliar que faz o assign a variavel lvalue com o valor rvalue *)
 (* Se os valores forem records ou arrays faz assign dos valores campo a *)
 (* campo ou indice a indice *)
@@ -371,8 +350,8 @@ and evalAllDecls listArgs listExpr consts vars opers env =
   	(* criar args *)
   	let (allArgs, args_env) = 
   		List.fold_left2 (fun (prev_list, prev_env) (s, _) e1 -> 
-  													let copy = (get_const_copy (evalExp' e1)) in
-  														(s::prev_list, assoc s copy prev_env)
+  													let param = evalExp' e1 in
+  														(s::prev_list, assoc s param prev_env)
   										) ([], env) listArgs listExpr in
 		(* criar consts *)
 		let allConsts, env_consts = evalDecls args_env consts in

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 class Cell {
 	object value;
@@ -7,12 +8,28 @@ class Cell {
 		value = v; 
 	}
 	
-	public object get() { 
+	public object get() {
 		return value; 
 	}
 	
-	public void set(object v) { 
-		value = v;
+	public void set(object v) {
+			value = v;
+	}
+	
+	public object getCopy(bool to_var) {
+		object copy = null;
+		if(value is Record)
+			copy = ((Record) value).getCopy();
+		else if(value is Array)
+			copy = ((Array) value).getCopy();
+		else if(value is Cell)
+			copy = ((Cell) value).getCopy(to_var);
+		else 
+			copy = value;
+		if (to_var)
+			return new Cell(copy);
+		else
+			return copy;
 	}
 }
 
@@ -70,4 +87,97 @@ class Closure {
 
 	public StackFrame getSF() { return stackFrame; }
 	public IntPtr getFtn() { return ftn; }
+	public object getCopy() { return new Closure(stackFrame, ftn); }
+}
+
+public class Record {
+	private Dictionary<string, object> record;
+
+	public Record(){
+		this.record = new Dictionary<string, object>();
+	}
+	
+	public object GetValue(string key){
+		return record[key];
+	}
+	
+	public void SetValue(string key, object val){
+		record.Add(key, val);
+	}
+
+	public object getCopy(){
+		Dictionary<string, object> copy = new Dictionary<string, object>();
+		foreach (KeyValuePair<string, object> pair in record){
+			string key = pair.Key;
+			object val = pair.Value;
+			
+			if(val is Record){
+				object copyR = ((Record) val).getCopy();
+				copy.Add(key, copyR);
+			} else if(val is Array) {
+				object copyA = ((Array) val).getCopy();
+				copy.Add(key, copyA);
+			} else if(val is Cell){
+				object copyC = ((Cell) val).getCopy(true);
+				copy.Add(key, copyC);
+			} else 
+				copy.Add(key, val);
+		}
+		return copy;
+	}
+}
+
+public class Array {
+	private object[] array;
+	
+	public Array(int size, object _default_){
+		array = new object[size];
+		for (int i = 0; i < size; i++){
+			if (_default_ is Array)
+				array[i] = ((Array)_default_).getCopy();
+			else if ( _default_ is Record)
+				array[i] = ((Record)_default_).getCopy();
+			else if (_default_ is Cell) 
+				array[i] = ((Cell) _default_).getCopy(true);
+			else
+				array[i] = _default_;
+		}
+	}
+	
+	public void Set(int index, object elem){
+		array[index] = elem;
+	}
+	
+	public object Get(int index){
+		return array[index];
+	}
+	
+	public object getCopy(){
+		Array copy = new Array(array.Length, null);
+		for (int i = 0; i < array.Length; i++){
+			if (array[i] is Array)
+				copy.Set(i, ((Array)array[i]).getCopy());
+			else if ( array[i] is Record)
+				copy.Set(i, ((Record)array[i]).getCopy());
+			else if(array[i] is Cell)
+				copy.Set(i, ((Cell) array[i]).getCopy(true));
+			else
+				copy.Set(i, array[i]);
+		}
+		return copy;
+	}
+}
+
+public class Reader {
+	string[] buffer;
+	int curr;
+	
+	public Reader(){
+		curr = 0;
+		buffer = [];
+	}
+	
+	public string read(){
+	
+	}
 }
