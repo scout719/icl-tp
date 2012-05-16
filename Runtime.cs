@@ -102,36 +102,42 @@ public class Record {
 	}
 	
 	public void SetValue(string key, object val){
-		record.Add(key, val);
+		this.record.Remove(key);
+		this.record.Add(key, val);
 	}
 
 	public object getCopy(){
-		Dictionary<string, object> copy = new Dictionary<string, object>();
+		Record copy_ = new Record();
+		Dictionary<string, object> copy = copy_.record;
 		foreach (KeyValuePair<string, object> pair in record){
 			string key = pair.Key;
 			object val = pair.Value;
 			
 			if(val is Record){
 				object copyR = ((Record) val).getCopy();
-				copy.Add(key, copyR);
+				copy.Add(key, new Cell(copyR));
 			} else if(val is Array) {
 				object copyA = ((Array) val).getCopy();
-				copy.Add(key, copyA);
+				copy.Add(key, new Cell(copyA));
 			} else if(val is Cell){
 				object copyC = ((Cell) val).getCopy(true);
 				copy.Add(key, copyC);
 			} else 
-				copy.Add(key, val);
+				copy.Add(key, new Cell(val));
 		}
-		return copy;
+		return copy_;
 	}
 }
 
 public class Array {
 	private object[] array;
 	
+	public Array(int size){
+		this.array = new object[size];
+	}
+	
 	public Array(int size, object _default_){
-		array = new object[size];
+		this.array = new object[size];
 		for (int i = 0; i < size; i++){
 			if (_default_ is Array)
 				array[i] = ((Array)_default_).getCopy();
@@ -156,19 +162,19 @@ public class Array {
 		Array copy = new Array(array.Length, null);
 		for (int i = 0; i < array.Length; i++){
 			if (array[i] is Array)
-				copy.Set(i, ((Array)array[i]).getCopy());
+				copy.Set(i, new Cell(((Array)array[i]).getCopy()));
 			else if ( array[i] is Record)
-				copy.Set(i, ((Record)array[i]).getCopy());
+				copy.Set(i, new Cell(((Record)array[i]).getCopy()));
 			else if(array[i] is Cell)
 				copy.Set(i, ((Cell) array[i]).getCopy(true));
 			else
-				copy.Set(i, array[i]);
+				copy.Set(i, new Cell(array[i]));
 		}
 		return copy;
 	}
 }
 
-public class Reader {
+/*public class Reader {
 	string[] buffer;
 	int curr;
 	
@@ -180,4 +186,4 @@ public class Reader {
 	public string read(){
 	
 	}
-}
+}*/

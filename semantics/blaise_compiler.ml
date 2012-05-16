@@ -72,6 +72,7 @@ let call_proc = ["calli void(object)"];;
 (** ******************************************** CLASS OPERS   ************************************************ *)
 
 let print typE = ["call void class[mscorlib]System.Console::Write("^typE^")"];;
+let print_ln typE = ["call void class[mscorlib]System.Console::WriteLine("^typE^")"];;
 let new_cell =  ["newobj instance void [Runtime]Cell::.ctor(object)"];;
 let cell_get =  ["callvirt instance object [Runtime]Cell::get()"];;
 let cell_set =  ["callvirt instance void [Runtime]Cell::set(object)"];;
@@ -90,6 +91,7 @@ let record_get = ["callvirt instance object [Runtime]Record::GetValue(string)"];
 let record_set = ["callvirt instance void [Runtime]Record::SetValue(string, object)"];;
 let record_copy = ["callvirt instance object [Runtime]Record::getCopy()"];;
 let new_array = ["newobj instance void [Runtime]Array::.ctor(int32, object)"];;
+let new_array_no_default = ["newobj instance void [Runtime]Array::.ctor(int32)"];;
 let array_get = ["callvirt instance object [Runtime]Array::Get(int32)"];;
 let array_set = ["callvirt instance void [Runtime]Array::Set(int32, object)"];;
 let array_copy = ["callvirt instance object [Runtime]Array::getCopy()"];;
@@ -98,12 +100,11 @@ let array_copy = ["callvirt instance object [Runtime]Array::getCopy()"];;
 
 let preamble num_locals = [".assembly 'Blaise' {}";
     											 ".assembly extern Runtime {}";
-													 ".assembly extern Record {}";
-													 ".assembly extern Array {}";
     											 ".module Blaise.exe";
     											 ".method public static hidebysig default void Main () cil managed";
     											 "{";
     													".entrypoint";
+															".maxstack 100";
     													".locals init (object stackframe, object tmp, object tmp2)";
     													"ldnull";
     													"newobj instance void [Runtime]StackFrame::.ctor(object)";
@@ -283,7 +284,7 @@ let rec compile_expr env to_result e =
 									let new_index = prev_index + 1 in
 										(prev_comp @ temp_comp, new_index)
 															) ([], 0) list in
-						(ldc length) @ new_array @ comp_set_array
+						(ldc length) @ new_array_no_default @ comp_set_array
 
 		| Record (list, _) -> 
 					let comp_set_record = 
@@ -525,11 +526,7 @@ and compile_stat env s =
 		
 		| WriteLn (list, t) -> 
 					let comp_write = compile_stat' (Write (list, t)) in
-					let print_ln = ("ldstr \"\n\"") :: (print "class System.String") in
-						comp_write @ print_ln
-
-		| Read list, _ ->
-					
+						comp_write @ (print_ln "")
 
 		| CallProc (e, list, _) -> 
 					let closure = compile_expr' e in

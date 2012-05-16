@@ -12,3 +12,4 @@ test
 *.exe
 *.dll
 tests/
+*.rb
