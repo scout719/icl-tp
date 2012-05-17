@@ -6,7 +6,7 @@ all: $(BIN).exe
 	@rm Runtime.dll
 
 $(BIN).exe: $(BIN).il Runtime.dll
-	@$(ILASM) $(BIN).il > /dev/nul 2> /dev/nul
+	@$(ILASM) $(BIN).il > nul 2> nul
 
 Runtime.dll: Runtime.cs
 	@mcs /target:library Runtime.cs

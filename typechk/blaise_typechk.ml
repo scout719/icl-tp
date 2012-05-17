@@ -383,7 +383,7 @@ and typechk_oper env o =
 					let decl_block, temp_env, decl_type = typechk_all_decls new_env consts vars opers in
 					let args_type_list = List.map (fun (_, t) -> t) args_list in
 					let recursive_env = assoc name (TFun ( args_type_list, t)) temp_env in
-					let new_env = assoc "result" (TRef(ref t)) recursive_env in
+					let new_env = assoc "result" (get_reference_to t) recursive_env in
 					let s' = typechk_stat new_env s in
 					let fun_type = if (get_type_stat s') = TUnit then t else TNone in
 					let final_env = assoc name (TFun ( args_type_list, fun_type)) env in

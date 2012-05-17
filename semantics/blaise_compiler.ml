@@ -600,7 +600,7 @@ let rec compile_oper env o =
 					let num_locals = end_locals () in
 					let comp_fun = (preamble_fun id num_locals) @ comp_result @ decl_comp @ comp_s @ get_result @ footer in
 					let comp_set_closure = ldloc_stackframe @ (ldc recursive_addr) @ comp_closure @ stack_set in
-						(comp_set_closure, comp_fun, new_env)
+						(comp_set_closure, comp_fun @ decl_list, new_env)
 
 		| Procedure (name, args_list, [consts; vars; opers], s, _) -> 
 					let id = fresh_identifier () in
@@ -618,7 +618,7 @@ let rec compile_oper env o =
 					let num_locals = end_locals () in
 					let comp_proc = (preamble_proc id num_locals) @ decl_comp @ comp_s @ footer in
 					let comp_set_closure = ldloc_stackframe @ (ldc recursive_addr) @ comp_closure @ stack_set in
-						(comp_set_closure, comp_proc, new_env)
+						(comp_set_closure, comp_proc @ decl_list, new_env)
 
 		| _ -> ([], [] ,[]) (* dummy *)
 
