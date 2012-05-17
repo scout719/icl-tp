@@ -37,6 +37,7 @@ let ldc_bool b =
 			(ldc 0) @ box_bool;;
 let ldstr s = ["ldstr \""^ s ^"\""];;
 let ldloc_stackframe = ["ldloc stackframe" ];;
+let ld_reader = ["ldsfld class [Runtime]Reader r"];;
 
 (** ********************************************   OPERATORS   ************************************************ *)
 
@@ -95,12 +96,17 @@ let new_array_no_default = ["newobj instance void [Runtime]Array::.ctor(int32)"]
 let array_get = ["callvirt instance object [Runtime]Array::Get(int32)"];;
 let array_set = ["callvirt instance void [Runtime]Array::Set(int32, object)"];;
 let array_copy = ["callvirt instance object [Runtime]Array::getCopy()"];;
+let read_int = ["callvirt instance int32 [Runtime]Reader::readInt()"];;
+let read_bool = ["callvirt instance bool [Runtime]Reader::readBool()"];;
+let read_string = ["callvirt instance string [Runtime]Reader::readString()"];;
+let read_line = ["callvirt instance void [Runtime]Reader::readLine()"];;
 
 (** ******************************************** PREAMBLES/FOOTERS ******************************************** *)
 
 let preamble num_locals = [".assembly 'Blaise' {}";
     											 ".assembly extern Runtime {}";
     											 ".module Blaise.exe";
+													 ".field public static class [Runtime]Reader r";
     											 ".method public static hidebysig default void Main () cil managed";
     											 "{";
     													".entrypoint";
@@ -109,7 +115,9 @@ let preamble num_locals = [".assembly 'Blaise' {}";
     													"ldnull";
     													"newobj instance void [Runtime]StackFrame::.ctor(object)";
     													"stloc stackframe";
-    													"ldloc stackframe";
+															"newobj instance void [Runtime]Reader::.ctor()";
+															"stsfld class [Runtime]Reader r";
+															"ldloc stackframe";
     													"ldc.i4 "^(string_of_int num_locals);
     													"callvirt instance void [Runtime]StackFrame::initLocals(int32)"];;
 
@@ -155,6 +163,13 @@ let write_type t =
 		| TNumber -> unbox_int32 @ (print int32)
 		| TBoolean -> unbox_bool @ (print bool)
 		| TString -> print string
+		| _ -> [] (* dummy *);;
+
+let read_type t =
+	match t with
+		| TNumber -> ld_reader @ read_int @ box_int32
+		| TBoolean -> ld_reader @ read_bool @ box_bool
+		| TString -> ld_reader @ read_string
 		| _ -> [] (* dummy *);;
 
 let rec compile_default_type t =
@@ -246,13 +261,13 @@ let find_idx f env =
 let find s env =
 	let f = fun (stackframe, _) -> StackframeMap.mem s stackframe in
 	let stack, jumps = find_idx f env in
-	let (offset, is_var) = StackframeMap.find s (fst stack) in
-		(jumps, offset, is_var);;
+	let offset = StackframeMap.find s (fst stack) in
+		(jumps, offset);;
 
-let assoc x env is_var =
+let assoc x env =
 	let sf, count = List.hd env in
 	let new_count = !count + 1 in
-	let new_sf = StackframeMap.add x (new_count, is_var) sf in
+	let new_sf = StackframeMap.add x (new_count) sf in
 		count := new_count;
 		(new_sf, count) :: (List.tl env);;
 			
@@ -410,7 +425,7 @@ let rec compile_expr env to_result e =
 						compile_un_oper_bool comp_eq noT
 
 		| Id (s, t)  -> 
-					let jumps, offset, _ = find s env in
+					let jumps, offset = find s env in
 					let jump_comp = get_jumps_list jumps [] in
 					let var = is_var t in
 					let deref = 
@@ -528,6 +543,18 @@ and compile_stat env s =
 					let comp_write = compile_stat' (Write (list, t)) in
 						comp_write @ (print_ln "")
 
+		| Read (list, tl, _) ->
+					List.fold_left2 (fun prev_comp s t -> 
+							let s_t = unref_iType t in
+							let comp_get = compile_expr env false (Id(s, t)) in
+							let comp_read = comp_get @ (read_type s_t) @ cell_set in
+								prev_comp @ comp_read
+													) [] list tl
+
+		| ReadLn (list, tl, t) -> 
+					let comp_read = compile_stat' (Read (list, tl, t)) in
+						comp_read @ ld_reader @ read_line
+
 		| CallProc (e, list, _) -> 
 					let closure = compile_expr' e in
 					let args_comp, num_args = 
@@ -556,16 +583,16 @@ let rec compile_oper env o =
 					let id = fresh_identifier () in
 					let comp_closure = ldloc_stackframe @ (ldftn_fun id) @ new_closure in
 					inc_locals ();
-					let new_env = assoc name env false in
-					let _ , recursive_addr, _ = find name new_env in
+					let new_env = assoc name env in
+					let _ , recursive_addr = find name new_env in
 					let fun_env = begin_scope new_env in
 					begin_locals ();
 					let args_env = 
-							List.fold_left 	(fun prev_env (s, _) -> assoc s prev_env false
+							List.fold_left 	(fun prev_env (s, _) -> assoc s prev_env
 															) fun_env args_list in
 					inc_locals ();
-					let temp_env = assoc "result" args_env true in
-					let _, result_addr, _ = find "result" temp_env in
+					let temp_env = assoc "result" args_env in
+					let _, result_addr = find "result" temp_env in
 					let comp_result = (ldloc_stackframe) @ (ldc result_addr) @ (compile_default_type t) @ stack_set in
 					let get_result = ldloc_stackframe @ (ldc result_addr) @ stack_get @ cell_get in
 					let decl_comp, decl_list, decl_env = compile_all_decls consts vars opers temp_env in
@@ -579,12 +606,12 @@ let rec compile_oper env o =
 					let id = fresh_identifier () in
 					let comp_closure = ldloc_stackframe @ (ldftn_proc id) @ new_closure in
 					inc_locals ();
-					let new_env = assoc name env false in
-					let _ , recursive_addr, _ = find name new_env in
+					let new_env = assoc name env in
+					let _ , recursive_addr = find name new_env in
 					let proc_env = begin_scope new_env in
 					begin_locals ();
 					let args_env = 
-							List.fold_left 	(fun prev_env (s, _) -> assoc s prev_env false
+							List.fold_left 	(fun prev_env (s, _) -> assoc s prev_env
 															) proc_env args_list in
 					let decl_comp, decl_list, decl_env = compile_all_decls consts vars opers args_env in
 					let comp_s = compile_stat decl_env s in
@@ -602,8 +629,8 @@ and compile_decl env d =
 						List.fold_left ( fun 	(prev_comp, prev_env) (t, list2) ->
 								List.fold_left ( fun (prev_comp, prev_env) s -> 
 										inc_locals ();
-										let new_env = assoc s prev_env true in
-										let _, addr, _ = find s new_env in
+										let new_env = assoc s prev_env in
+										let _, addr = find s new_env in
 										let default_comp = compile_default_type t in
 										let new_comp = prev_comp @ (ldloc_stackframe) @ (ldc addr) @ default_comp @ stack_set in
 											(new_comp, new_env)
@@ -615,8 +642,8 @@ and compile_decl env d =
 					let (consts_comp, consts_env) =
 						List.fold_left ( fun 	(prev_comp, prev_env) (s, e) ->
 									inc_locals ();
-									let new_env = assoc s prev_env false in
-									let _, addr, _ = find s new_env in
+									let new_env = assoc s prev_env in
+									let _, addr = find s new_env in
 									let comp_e = compile_expr env true e in
 									let new_comp = prev_comp @ (ldloc_stackframe) @ (ldc addr) @ comp_e @ stack_set in
 										(new_comp, new_env)

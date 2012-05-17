@@ -33,8 +33,8 @@ type statement =
 	| If of expr * statement * iType
 	| Write of expr list * iType
 	| WriteLn of expr list * iType
-	| Read of string list * iType
-	| ReadLn of string list * iType
+	| Read of string list * (iType list) * iType
+	| ReadLn of string list * (iType list) * iType
 	| Seq of statement * statement * iType
 	| CallProc of expr * (expr list) * iType;;
 

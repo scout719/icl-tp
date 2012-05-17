@@ -125,8 +125,8 @@ stmt:
 | WRITELN LPAR expr_list_or_empty RPAR { WriteLn( $3, TUndefined ) }
 | factor LPAR expr_list_or_empty RPAR { CallProc($1, $3, TUndefined) }
 | RESULT ASSIGN expr { Assign(Id("result",TUndefined), $3, TUndefined ) }
-| READ LPAR id_list RPAR { Read( $3, TUndefined ) }
-| READLN LPAR id_list RPAR { ReadLn( $3, TUndefined ) }
+| READ LPAR id_list RPAR { Read( $3, [TUndefined] , TUndefined) }
+| READLN LPAR id_list RPAR { ReadLn( $3, [TUndefined], TUndefined ) }
 ;
 
 expr_list_or_empty:

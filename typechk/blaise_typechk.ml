@@ -1,18 +1,16 @@
 open Blaise_syntax
 open Blaise_iType
 
-exception Invalid_type of string
-exception Id_not_found of string
-exception Id_already_declared of string
+exception Type_check_error of string;;
 
-module TypeEnvMap = Map.Make (String)
+module TypeEnvMap = Map.Make (String);;
 
-type env = string * iType TypeEnvMap.t
+type env = string * iType TypeEnvMap.t;;
 
 let find s env =
 	try
 		TypeEnvMap.find s env
-	with Not_found -> raise (Id_not_found s)
+	with Not_found -> raise (Type_check_error ("Id not found: " ^ s));;
 	
 let assoc k v env =
 	TypeEnvMap.add k v env
@@ -25,14 +23,9 @@ let check_duplicates list =
 																							s = x
 																				) list in
 									if List.length all <> 1 then
-										raise (Id_already_declared x)
+										raise (Type_check_error ("Id already declared: " ^ x))
 									else
 										()) list;;
-
-let to_result t =
-	match t with
-		| TRef r -> !r
-		| _ -> t;;
 
 let rec check_assign l r =
 	match l with
@@ -71,7 +64,7 @@ let rec check_assign l r =
 										TNone
 										
 					| tl, tr -> 
-								if tl = (to_result tr) then
+								if tl = (unref_iType tr) then
 									TUnit
 								else
 									TNone
@@ -93,7 +86,7 @@ let rec typechk_exp env e =
 								List.fold_left (
 										fun (prev_list, prev_type) e -> 
   											let e' = typechk_exp' e in
-												let t = to_result (get_type e') in
+												let t = unref_iType (get_type e') in
   												if 	prev_type <> TNone && 
 															(t = prev_type || prev_type = TUndefined) then
   													(prev_list @ [e'], t)
@@ -114,7 +107,7 @@ let rec typechk_exp env e =
 											
 		| Add (e1, e2, _) -> 
 					let e1', e2' = typechk_exp' e1, typechk_exp' e2 in
-					let t1, t2 = to_result (get_type e1'), to_result (get_type e2') in
+					let t1, t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
 						if (bin_oper_int t1 t2) then 
 							Add(e1', e2', TNumber)
 						else if (bin_oper_str t1 t2) then 
@@ -124,7 +117,7 @@ let rec typechk_exp env e =
 
 		| Sub (e1, e2, _) -> 
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
-					let t1,t2 = to_result (get_type e1'), to_result (get_type e2') in
+					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
 						if (bin_oper_int t1 t2) then 
 							Sub(e1', e2', TNumber)
 						else
@@ -132,7 +125,7 @@ let rec typechk_exp env e =
 
 		| Compl (e, _) ->
 					let e' = typechk_exp' e in
-					let t = to_result (get_type e') in
+					let t = unref_iType (get_type e') in
 						if (un_oper_int t) then 
 							Compl(e', TNumber)
 						else
@@ -140,7 +133,7 @@ let rec typechk_exp env e =
 
 		| Mult (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
-					let t1,t2 = to_result (get_type e1'), to_result (get_type e2') in
+					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
 						if (bin_oper_int t1 t2) then 
 							Mult(e1', e2', TNumber)
 						else
@@ -148,7 +141,7 @@ let rec typechk_exp env e =
 
 		| Div (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
-					let t1,t2 = to_result (get_type e1'), to_result (get_type e2') in
+					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
 						if (bin_oper_int t1 t2) then 
 							Div(e1', e2', TNumber)
 						else
@@ -156,7 +149,7 @@ let rec typechk_exp env e =
 
 		| Mod (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
-					let t1,t2 = to_result (get_type e1'), to_result (get_type e2') in
+					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
 						if (bin_oper_int t1 t2) then 
 							Mod(e1', e2', TNumber)
 						else
@@ -164,7 +157,7 @@ let rec typechk_exp env e =
 
 		| Eq (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
-					let t1,t2 = to_result (get_type e1'), to_result (get_type e2') in
+					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
 						if (bin_oper_bool t1 t2) || (bin_oper_int t1 t2) then 
 							Eq(e1', e2', TBoolean)
 						else
@@ -172,7 +165,7 @@ let rec typechk_exp env e =
 
 		| Neq (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
-					let t1,t2 = to_result (get_type e1'), to_result (get_type e2') in
+					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
 						if (bin_oper_bool t1 t2) || (bin_oper_int t1 t2) then 
 							Neq(e1', e2', TBoolean)
 						else
@@ -180,7 +173,7 @@ let rec typechk_exp env e =
 
 		| Gt (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
-					let t1,t2 = to_result (get_type e1'), to_result (get_type e2') in
+					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
 						if (bin_oper_bool t1 t2) || (bin_oper_int t1 t2) then 
 							Gt(e1', e2', TBoolean)
 						else
@@ -188,7 +181,7 @@ let rec typechk_exp env e =
 
 		| Lt (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
-					let t1,t2 = to_result (get_type e1'), to_result (get_type e2') in
+					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
 						if (bin_oper_bool t1 t2) || (bin_oper_int t1 t2) then 
 							Lt(e1', e2', TBoolean)
 						else
@@ -196,7 +189,7 @@ let rec typechk_exp env e =
 
 		| Gteq (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
-					let t1,t2 = to_result (get_type e1'), to_result (get_type e2') in
+					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
 						if (bin_oper_bool t1 t2) || (bin_oper_int t1 t2) then 
 							Gteq(e1', e2', TBoolean)
 						else
@@ -204,7 +197,7 @@ let rec typechk_exp env e =
 
 		| Lteq (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
-					let t1,t2 = to_result (get_type e1'), to_result (get_type e2') in
+					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
 						if (bin_oper_bool t1 t2) || (bin_oper_int t1 t2) then 
 							Lteq(e1', e2', TBoolean)
 						else
@@ -212,7 +205,7 @@ let rec typechk_exp env e =
 
 		| And (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
-					let t1,t2 = to_result (get_type e1'), to_result (get_type e2') in
+					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
 						if (bin_oper_bool t1 t2)then 
 							And(e1', e2', TBoolean)
 						else
@@ -220,7 +213,7 @@ let rec typechk_exp env e =
 
 		| Or (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
-					let t1,t2 = to_result (get_type e1'), to_result (get_type e2') in
+					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
 						if (bin_oper_bool t1 t2)then 
 							Or(e1', e2', TBoolean)
 						else
@@ -228,7 +221,7 @@ let rec typechk_exp env e =
 
 		| Not (e, _) ->
 					let e' = typechk_exp' e in
-					let t = to_result (get_type e') in
+					let t = unref_iType (get_type e') in
 						if (un_oper_bool t)then 
 							Not(e', TBoolean)
 						else
@@ -239,7 +232,7 @@ let rec typechk_exp env e =
 
 		| GetArray(e1, e2, _) ->
 					let e1',e2' = typechk_exp' e1,typechk_exp' e2 in
-					let t1, t2 = to_result (get_type e1'), to_result (get_type e2') in
+					let t1, t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
 					let array_type = get_type_of_array t1 in
 						if (un_oper_array t1) && (un_oper_int t2) then
 							GetArray(e1', e2', array_type)
@@ -248,7 +241,7 @@ let rec typechk_exp env e =
 
 		| GetRecord(e, s, _) -> 
 					let e' = typechk_exp' e in
-					let t = to_result (get_type e') in
+					let t = unref_iType (get_type e') in
 					let record_type = get_type_of_record s t in
 						if un_oper_record s t then
 							GetRecord(e', s, record_type)
@@ -257,13 +250,13 @@ let rec typechk_exp env e =
 
 		| CallFun(e, args_list, _) ->
 					let e' = typechk_exp' e in
-					let t = to_result (get_type e') in
+					let t = unref_iType (get_type e') in
 					let args_list' = 
 								List.map( fun e -> typechk_exp' e) args_list in
 						(match t with
 							| TFun (params_types, t) -> 
 										let matching_types = List.fold_left2 (fun prev_match e' t2 ->
-																													let t1 = to_result (get_type e') in
+																													let t1 = unref_iType (get_type e') in
 																														t2 = t1 && prev_match
 																													) true args_list' params_types in
 											if matching_types then
@@ -279,7 +272,7 @@ let rec typechk_stat env s =
 		match s with
 			| Assign (l, r, _) ->
 						let l', r' = typechk_exp' l, typechk_exp' r in
-						let t1, t2 = get_type l', to_result (get_type r') in
+						let t1, t2 = get_type l', unref_iType (get_type r') in
 						let assign_type = check_assign t1 t2 in
 							Assign(l', r', assign_type)
 								
@@ -291,7 +284,7 @@ let rec typechk_stat env s =
 			
 			| If (e, s, _) -> 
 						let e', s' = typechk_exp' e, typechk_stat' s in
-						let t1, t2 = to_result (get_type e'), get_type_stat s' in
+						let t1, t2 = unref_iType (get_type e'), get_type_stat s' in
 						let if_type = if t1 = TBoolean then t2 else TNone in
 							If(e', s', if_type)
 			
@@ -299,7 +292,7 @@ let rec typechk_stat env s =
 						let e', s1',s2' = typechk_exp' e, 
 															typechk_stat' s1, 
 															typechk_stat' s2 in
-						let t1, t2,t3 = to_result (get_type e'), 
+						let t1, t2,t3 = unref_iType (get_type e'), 
 														get_type_stat s1', 
 														get_type_stat s2' in
 						let if_type = if 	t1 = TBoolean && 
@@ -309,7 +302,7 @@ let rec typechk_stat env s =
 			
 			| While (e, s, _) ->
 						let e', s' = typechk_exp' e, typechk_stat' s in
-						let t1, t2 = to_result (get_type e'), get_type_stat s' in
+						let t1, t2 = unref_iType (get_type e'), get_type_stat s' in
 						let while_type = if t1 = TBoolean then t2 else TNone in
 							While(e', s', while_type)
 			
@@ -317,7 +310,7 @@ let rec typechk_stat env s =
 						let list', writable = 
 							List.fold_left ( fun (prev_list, prev_writable) e -> 
 																		let e' = typechk_exp' e in
-																		let t = to_result (get_type e') in
+																		let t = unref_iType (get_type e') in
 																			(prev_list @ [e'], is_writable t &&	prev_writable)
 															) ([], true) list in
 						let write_type = if writable then TUnit else TNone in
@@ -327,34 +320,34 @@ let rec typechk_stat env s =
 						let aux = typechk_stat' (Write(list, t)) in
 						( match aux with
 								| Write(list2, t2) -> WriteLn(list2, t2)
-								| _ -> raise (Invalid_type "") (* dummy *)
+								| _ -> raise (Type_check_error "Internal error: WriteLn()") (* dummy *)
 						)
 			
-			| Read (list, _) ->
-						let readable = 
-							List.fold_left (fun prev_readable s ->
+			| Read (list, _, _) ->
+						let readable, read_types_list = 
+							List.fold_left (fun (prev_readable, prev_list) s ->
 																	let t = find s env in
-																		is_readable t && prev_readable
-														) true list in
+																		(is_readable t && prev_readable, prev_list @ [t])
+														) (true, []) list in
 						let read_type = if readable then TUnit else TNone in
-							Read (list, read_type)
+							Read (list, read_types_list, read_type)
 			
-			| ReadLn (list, t) ->
-						let aux = typechk_stat' (Read(list, t)) in
+			| ReadLn (list, tl, t) ->
+						let aux = typechk_stat' (Read(list, tl, t)) in
 						( match aux with
-							| Read (list2, t2) -> ReadLn(list2, t2)
-							| _ -> raise (Invalid_type "") (* dummy *)
+							| Read (list2, tl2, t2) -> ReadLn(list2, tl2, t2)
+							| _ -> raise (Type_check_error "Internal error: ReadLn()") (* dummy *)
 						)
 			
   		| CallProc(e, args_list, _) -> 
   					let e' = typechk_exp' e in
-  					let t = to_result (get_type e') in
+  					let t = unref_iType (get_type e') in
   					let args_list' = 
   								List.map( fun e -> typechk_exp' e) args_list in
   						(match t with
   							| TProc params_types -> 
   										let matching_types = List.fold_left2 (fun prev_match e' t2 ->
-        																												let t1 = to_result (get_type e') in
+        																												let t1 = unref_iType (get_type e') in
         																													t2 = t1 && prev_match
   																													) true args_list' params_types in
   											if matching_types then
@@ -410,7 +403,7 @@ and typechk_oper env o =
 					let final_env = assoc name (TProc ( args_type_list)) env in
 						(name, Procedure (name, args_list, decl_block, s', s_type), final_env)
 		
-		| _ -> raise (Invalid_type "") (* dummy *)
+		| _ -> raise (Type_check_error "Internal error: operation expected") (* dummy *)
 
 and typechk_decl env d =
 		match d with	
@@ -460,4 +453,4 @@ let typechk_program p =
 					else
 						Program(name, decl_block, s', TNone)
 								
-		| _ -> raise (Invalid_type "") (* dummy *);;
+		| _ -> raise (Type_check_error "Internal error: Program expected") (* dummy *);;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 class Cell {
 	object value;
@@ -174,16 +175,45 @@ public class Array {
 	}
 }
 
-/*public class Reader {
+public class Reader {
 	string[] buffer;
 	int curr;
 	
 	public Reader(){
 		curr = 0;
-		buffer = [];
+		buffer = new string[0];
 	}
 	
-	public string read(){
-	
+	private string read(){
+		if (curr == buffer.Length){
+			Regex r = new Regex(@"\s+");
+			buffer = r.Split(Console.ReadLine());
+			curr = 0;
+			return read();
+		} else {
+			string token = buffer[curr];
+			curr++;
+			return token;
+		}
 	}
-}*/
+	
+	public int readInt(){
+		string token = read();
+		return Convert.ToInt32(token);
+	}
+	
+	public bool readBool(){
+		string token = read();
+		return Convert.ToBoolean(token);
+	}
+	
+	public string readString(){
+		return read();
+	}
+	
+	public void readLine(){
+		buffer = new string[0];
+		curr = 0;
+	}
+
+}
