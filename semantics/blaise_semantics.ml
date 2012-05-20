@@ -1,6 +1,7 @@
 open Blaise_syntax
 open Blaise_typechk
 open Ivalue
+open Blaise_iType
 
 exception Id_not_found of string
 exception Id_found of string
@@ -111,6 +112,19 @@ let rec assign lvalue rvalue =
 			
 	| _ -> raise (Invalid_value ("Ref expected: "^(string_of_ivalue lvalue)))
 
+
+				
+let get_oper_info oper = 
+	match oper with
+		| Function(name, list, _, _, t) -> (name, list, t)
+		| Procedure(name, list, _, _, t) -> (name, list, t)
+
+
+let rec get_methods opers = 
+	List.fold_left (fun prev_list oper ->
+				let oper_name, args_list, oper_type = get_oper_info oper in
+					prev_list @ [(oper_name, args_list, oper_type)]
+									) [] opers
 
 (***************************************************************************)
 (************************    INTERPRETER EXPR    ***************************)
@@ -334,8 +348,13 @@ and evalOpers env o =
 			let new_env = assoc name closure env in
 				ref_env := new_env;
 				(name, new_env)
-
-
+	
+(*	| Class (name, [consts; vars; Operations(opers, _)], statement, t) ->
+			let ref_env = ref env in
+			let method_list = get_methods opers in
+			let new_stat = Seq(statement, Assign(Id("result", TRef(ref TNumber)), Id("self", TObject(name, method_list)), TUnit), TUndefined) in
+				("", [])
+*)
 
 (***************************************************************************)
 (************************     INTERPRETER DECLS  ***************************)

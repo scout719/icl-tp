@@ -6,8 +6,6 @@ module StackframeMap = Map.Make (String);;
 
 (** ********************************************     FALTA     ************************************************ *)
 
-(* assign and create arrays *)
-
 (** ********************************************   COMPILER    ************************************************ *)
 
 exception Not_found;;
@@ -124,6 +122,7 @@ let preamble num_locals = [".assembly 'Blaise' {}";
 let preamble_proc num_proc num_locals = [".method public static hidebysig default void f"^(string_of_int num_proc)^" (object) cil managed";
                   											 "{";
                   													".locals init (object stackframe, object tmp, object tmp2)";
+																						".maxstack 100";
                   													"ldarg 0";
                   													"stloc stackframe";
                   													"ldloc stackframe";
@@ -133,6 +132,7 @@ let preamble_proc num_proc num_locals = [".method public static hidebysig defaul
 let preamble_fun num_fun num_locals = [".method public static hidebysig default object f"^(string_of_int num_fun)^" (object) cil managed";
                 											 "{";
                 													".locals init (object stackframe, object tmp, object tmp2)";
+																					".maxstack 100";
                 													"ldarg 0";
                 													"stloc stackframe";
                 													"ldloc stackframe";
@@ -662,8 +662,12 @@ and compile_all_decls consts vars opers env =
 	let (opers_comp, opers_list, opers_env) = compile_decl vars_env opers in
 		consts_comp @ vars_comp @ opers_comp, opers_list, opers_env
 
-let rec optimize comp =
-	comp;;
+let rec optimize comp opt =
+	match comp with
+		| "box int32" :: "unbox int32" :: "ldobj int32" :: xs -> optimize xs opt
+		| "box bool" :: "unbox bool" :: "ldobj bool" :: xs -> optimize xs opt
+		| x::xs -> optimize xs (opt@[x])
+		| [] -> opt;;
 
 let compile_program p =
 	match p with
@@ -673,8 +677,8 @@ let compile_program p =
 					let decl_comp, decl_list, decl_env = compile_all_decls consts vars opers env in
 					let comp_s = compile_stat decl_env s in
 					let all_comp = decl_comp @ comp_s in
-					let optimized_s = optimize all_comp in
-					let optimized_opers = optimize decl_list in
+					let optimized_s = optimize all_comp [] in
+					let optimized_opers = optimize decl_list [] in
 					let num_locals = end_locals () in
 						(preamble num_locals)@ optimized_s @ footer @ optimized_opers
 		| _ -> [] (* dummy *);;

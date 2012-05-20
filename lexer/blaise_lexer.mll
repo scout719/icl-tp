@@ -21,11 +21,11 @@ let  escape_char = '\\' (escapable_char | escape_code)
 let  string_char = escape_char | ['\000' - '\033'] | ['\035' - '\091'] | ['\093' - '\127']
 let  string_constant = '"' string_char* '"'
 
-let  block_comment_char = escape_char | ['\000' - '\034'] | ['\036' - '\122'] | '\124' | ['\126' - '\127']
-let  inline_comment_char = escape_char | ['\000' - '\009'] | ['\014' - '\127']
+let  block_comment_char = escape_char | ['\000' - '\041'] | ['\043' - '\046'] | ['\048' - '\127']
+let  inline_comment_char = escape_char | ['\000' - '\009'] | ['\014' - '\046'] | ['\048' - '\127']
 
-let  block_comment = "{##" (block_comment_char | "##" (block_comment_char | "#") | "}" | "#" | "{")* "##}"
-let  inline_comment = "/##" (inline_comment_char)* ['\010' - '\013']
+let  block_comment = "/*" (block_comment_char | "*" (block_comment_char) | "/")* "*/"
+let  inline_comment = "//" (inline_comment_char | ("/" inline_comment_char))* ['\010' - '\013']
 
 
 rule token = parse
@@ -59,8 +59,13 @@ rule token = parse
 	| "Array" { ARRAY }
 	| "Record" { REC }
 	| "Fun" { FUN }
+	| "Class" { TCLASS }
+	| "Object" { TOBJECT }
+	| "new" { NEW }
+	| "self" { SELF }
 	| "Proc" { PROC }
 	| "!quit" { QUIT }
+	| "class" { CLASS }
 	| ':' { COLON }
 	| '(' { LPAR }
 	| ')' { RPAR } 

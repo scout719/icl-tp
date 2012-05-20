@@ -6,6 +6,8 @@ type expr =
 	| Boolean of bool
 	| Array of expr list * iType
 	| Record of (string * expr) list * iType
+	| New of string * iType
+	| Self of iType
 	| Add of expr * expr * iType
 	| Sub of expr * expr * iType
 	| Compl of expr * iType
@@ -45,7 +47,8 @@ type decl_block =
 
 and oper = 
 	| Function of string * ((string * iType) list) * (decl_block list) * statement * iType
-	| Procedure of string * ((string * iType) list) * (decl_block list) * statement * iType;;
+	| Procedure of string * ((string * iType) list) * (decl_block list) * statement * iType
+	| Class of string * (decl_block list) * statement * iType;;
 
 type program = 
 	| Program of string * (decl_block list) * statement * iType;;
@@ -75,7 +78,7 @@ let get_type e =
 		| Id(_,t) -> t
 		| GetArray(_,_,t) -> t
 		| GetRecord(_,_,t) -> t
-		| CallFun(_,_,t) -> t
+		| CallFun(_,_,t) -> t;;
 
 let get_type_stat s =
 	match s with
@@ -88,20 +91,20 @@ let get_type_stat s =
 		| Read _ -> TUnit
 		| ReadLn _ -> TUnit
 		| Seq (_, _, t) -> t
-		| CallProc (_, _, t) -> t
+		| CallProc (_, _, t) -> t;;
 
 let get_type_decl d =
 	match d with
 		| Vars (_, t) -> t
 		| Consts (_, t) -> t
-		| Operations (_, t) -> t
+		| Operations (_, t) -> t;;
 
 let get_type_oper o =
 	match o with
 		| Function (_, _, _, _, t) -> t
 		| Procedure (_, _, _, _, t) -> t
+		| Class (_, _, _, t) -> t;;
 
 let get_type_program p =
 	match p with
-		| Program (_, _, _, t) -> t
-
+		| Program (_, _, _, t) -> t;;

@@ -158,6 +158,14 @@ public class Array {
 	public object Get(int index){
 		return array[index];
 	}
+
+	/*
+	public void CopyTo(object destination){
+		for(int i = 0; i < array.Length; i++){
+			
+		}
+	}
+	*/
 	
 	public object getCopy(){
 		Array copy = new Array(array.Length, null);

@@ -236,7 +236,7 @@ let rec typechk_exp env e =
 					let array_type = get_type_of_array t1 in
 						if (un_oper_array t1) && (un_oper_int t2) then
 							GetArray(e1', e2', array_type)
-						else 
+						else
 							GetArray(e1', e2', TNone)
 
 		| GetRecord(e, s, _) -> 
@@ -380,10 +380,10 @@ and typechk_oper env o =
       																			(prev_args @ [s], assoc s t prev_env)
       																					) ([], env) args_list in
       			check_duplicates all_args;
-					let decl_block, temp_env, decl_type = typechk_all_decls new_env consts vars opers in
 					let args_type_list = List.map (fun (_, t) -> t) args_list in
-					let recursive_env = assoc name (TFun ( args_type_list, t)) temp_env in
-					let new_env = assoc "result" (get_reference_to t) recursive_env in
+					let recursive_env = assoc name (TFun ( args_type_list, t)) new_env in
+					let decl_block, temp_env, decl_type = typechk_all_decls recursive_env consts vars opers in
+					let new_env = assoc "result" (get_reference_to t) temp_env in
 					let s' = typechk_stat new_env s in
 					let fun_type = if (get_type_stat s') = TUnit then t else TNone in
 					let final_env = assoc name (TFun ( args_type_list, fun_type)) env in
@@ -395,10 +395,10 @@ and typechk_oper env o =
       																			(prev_args @ [s], assoc s t prev_env)
       																					) ([], env) args_list in
       			check_duplicates all_args;
-					let decl_block, temp_env, decl_type = typechk_all_decls new_env consts vars opers in
 					let args_type_list = List.map (fun (_, t) -> t) args_list in
-					let recursive_env = assoc name TUnit temp_env in
-					let s' = typechk_stat recursive_env s in
+					let recursive_env = assoc name (TProc (args_type_list)) new_env in
+					let decl_block, temp_env, decl_type = typechk_all_decls recursive_env consts vars opers in
+					let s' = typechk_stat temp_env s in
 					let s_type = get_type_stat s' in
 					let final_env = assoc name (TProc ( args_type_list)) env in
 						(name, Procedure (name, args_list, decl_block, s', s_type), final_env)

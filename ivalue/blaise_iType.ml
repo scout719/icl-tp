@@ -7,6 +7,9 @@ type iType =
 	| TArray of int * iType
 	| TRecord of (string * iType) list
 	| TRef of iType ref
+	| TClass of string * (string * (iType list) * iType) list
+	| TObject of string * (string * (iType list) * iType) list
+	| TClass_id of string
 	| TUnit
 	| TNone
 	| TUndefined;;

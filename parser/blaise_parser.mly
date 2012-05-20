@@ -15,10 +15,14 @@ open Blaise_iType
 %token PLUS MINUS MULT DIV GT GTEQ LT LTEQ AND OR EQUAL MOD NEQ
 %token ASSIGN
 
+%token CLASS TOBJECT TCLASS NEW SELF
+
 %token INTEGER STRING ARRAY REC FUN PROC BOOL
 
 %left LOWER_THAN_ELSE
 %left ELSE
+%left NO_RETURN
+%left COLON
 
 %token QUIT
 
@@ -82,6 +86,7 @@ decl_list:
 decl:
   fun_decl { $1 }
 | proc_decl { $1 }
+| class_decl { $1 }
 ;
 
 fun_decl:
@@ -91,6 +96,9 @@ fun_decl:
 proc_decl:
 	PROCEDURE ID LPAR param_list RPAR decl_block begin_end_block { Procedure($2, $4, $6, $7, TUndefined) }
 ;
+
+class_decl:
+	CLASS ID decl_block begin_end_block { Class($2, $3, $4, TUndefined) }
 
 param_list:
   { [] }
@@ -180,11 +188,13 @@ un_op:
   factor { $1 }
 | NOT factor { Not($2,TUndefined) }
 | MINUS factor { Compl($2,TUndefined) }
+| NEW ID { New($2, TUndefined) }
 ;
 
 factor:
   NUM { Number($1) }
 | STRING_CONST { String($1) }
+| SELF { Self(TUndefined) }
 | ID { Id($1,TUndefined) }
 | LPAR expr RPAR { $2 }
 | TRUE { Boolean(true) }
@@ -220,6 +230,34 @@ type_decl:
 | proc_type { $1 }
 | array_type { $1 }
 | rec_type { $1 }
+| object_type { $1 }
+| class_type { $1 }
+| ID { TClass_id($1) }
+;
+
+class_type:
+	TCLASS LPAR ID RPAR LPAR methods_list_or_empty RPAR { TClass($3, $6) }
+|	TCLASS LPAR methods_list_or_empty RPAR { TClass("", $3) }
+;
+
+object_type:
+	TOBJECT LPAR ID RPAR LPAR methods_list_or_empty RPAR { TObject($3, $6) }
+|	TOBJECT LPAR methods_list_or_empty RPAR { TObject("", $3) }
+;
+	
+methods_list_or_empty:
+	{ [] }
+| methods_list { $1 }
+;
+
+methods_list:
+	method_decl { [$1] }
+| method_decl COMMA methods_list { $1 :: $3 }
+;
+
+method_decl:
+	ID LPAR type_decl_list RPAR COLON type_decl { ($1, $3, TUnit) }
+|	ID LPAR type_decl_list RPAR %prec NO_RETURN { ($1, $3, TUnit) }
 ;
 
 func_type:
