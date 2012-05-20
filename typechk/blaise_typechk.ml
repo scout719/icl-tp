@@ -71,6 +71,37 @@ let rec check_assign l r =
 				)
 		| _ -> TNone;;
 
+let rec check_matching_types t1 t2 =
+	match t1, unref_iType t2 with
+		| TNumber , TNumber -> true
+		| TString, TString -> true
+		| TBoolean, TBoolean -> true
+		| TArray (length1, t1'), TArray (length2, t2') -> 
+					if length1 = length2 then
+						check_matching_types t1' t2'
+					else
+						false
+						
+		| TRecord list1, TRecord list2 -> 
+					List.fold_left2 (fun prev_match (s1, t1') (s2, t2') -> 
+								prev_match && s1 = s2 && (check_matching_types t1' t2')
+													) true list1 list2
+													
+		| TFun (list1, t1'), TFun(list2, t2') ->
+					if check_matching_types t1' t2' then
+						List.fold_left2 (fun prev_match t1'' t2'' -> 
+								prev_match && (check_matching_types t1'' t2'')
+													) true list1 list2
+					else
+						false
+						
+		| TProc list1, TProc list2 ->
+					List.fold_left2 (fun prev_match t1' t2' -> 
+								prev_match && (check_matching_types t1' t2')
+													) true list1 list2
+		
+		| _ -> false
+
 let rec typechk_exp env e =
 	let typechk_exp' = typechk_exp env in
 	match e with
@@ -257,7 +288,7 @@ let rec typechk_exp env e =
 							| TFun (params_types, t) -> 
 										let matching_types = List.fold_left2 (fun prev_match e' t2 ->
 																													let t1 = unref_iType (get_type e') in
-																														t2 = t1 && prev_match
+																														(check_matching_types t2 t1) && prev_match
 																													) true args_list' params_types in
 											if matching_types then
 												CallFun(e', args_list', t)
@@ -347,8 +378,8 @@ let rec typechk_stat env s =
   						(match t with
   							| TProc params_types -> 
   										let matching_types = List.fold_left2 (fun prev_match e' t2 ->
-        																												let t1 = unref_iType (get_type e') in
-        																													t2 = t1 && prev_match
+        																										let t1 = unref_iType (get_type e') in
+																															(check_matching_types t2 t1) && prev_match
   																													) true args_list' params_types in
   											if matching_types then
   												CallProc(e', args_list', TUnit)

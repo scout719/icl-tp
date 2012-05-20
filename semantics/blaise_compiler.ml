@@ -5,7 +5,7 @@ open Blaise_iType;;
 module StackframeMap = Map.Make (String);;
 
 (** ********************************************     FALTA     ************************************************ *)
-
+(* criar copia constante para parametro *)
 (** ********************************************   COMPILER    ************************************************ *)
 
 exception Not_found;;
@@ -73,31 +73,30 @@ let call_proc = ["calli void(object)"];;
 let print typE = ["call void class[mscorlib]System.Console::Write("^typE^")"];;
 let print_ln typE = ["call void class[mscorlib]System.Console::WriteLine("^typE^")"];;
 let new_cell =  ["newobj instance void [Runtime]Cell::.ctor(object)"];;
-let cell_get =  ["callvirt instance object [Runtime]Cell::get()"];;
-let cell_set =  ["callvirt instance void [Runtime]Cell::set(object)"];;
-let cell_copy =  ["callvirt instance object [Runtime]Cell::getCopy()"];;
+let cell_get =  ["callvirt instance object [Runtime]Cell::Get()"];;
+let cell_set =  ["callvirt instance void [Runtime]Cell::Set(object)"];;
 let new_stack =  ["newobj instance void [Runtime]StackFrame::.ctor(object)"];;
-let stack_get = ["callvirt instance object [Runtime]StackFrame::get(int32)"];;
-let stack_set = ["callvirt instance void [Runtime]StackFrame::set(int32, object)"];;
-let stack_init_locals = ["callvirt instance void [Runtime]StackFrame::initLocals(int32)"];;
-let stack_init_args = ["callvirt instance void [Runtime]StackFrame::initArgs(int32)"];;
+let stack_get = ["callvirt instance object [Runtime]StackFrame::Get(int32)"];;
+let stack_set = ["callvirt instance void [Runtime]StackFrame::Set(int32, object)"];;
+let stack_init_locals = ["callvirt instance void [Runtime]StackFrame::InitLocals(int32)"];;
+let stack_init_args = ["callvirt instance void [Runtime]StackFrame::InitArgs(int32)"];;
 let new_closure = ["newobj instance void [Runtime]Closure::.ctor(class [Runtime]StackFrame,native int)"];;
-let closure_get_SF = ["callvirt instance class [Runtime]StackFrame [Runtime]Closure::getSF()"];;
-let closure_get_Ftn = ["callvirt instance native int [Runtime]Closure::getFtn()"];;
-let closure_copy = ["callvirt instance object [Runtime]Closure::getCopy()"];;
+let closure_get_SF = ["callvirt instance class [Runtime]StackFrame [Runtime]Closure::GetSF()"];;
+let closure_get_Ftn = ["callvirt instance native int [Runtime]Closure::GetFtn()"];;
+let closure_copy_to = ["callvirt instance void [Runtime]Closure::CopyTo(object)"];;
 let new_record = ["newobj instance void [Runtime]Record::.ctor()"];;
 let record_get = ["callvirt instance object [Runtime]Record::GetValue(string)"];;
 let record_set = ["callvirt instance void [Runtime]Record::SetValue(string, object)"];;
-let record_copy = ["callvirt instance object [Runtime]Record::getCopy()"];;
+let record_copy_to = ["callvirt instance void [Runtime]Record::CopyTo(object)"];;
 let new_array = ["newobj instance void [Runtime]Array::.ctor(int32, object)"];;
 let new_array_no_default = ["newobj instance void [Runtime]Array::.ctor(int32)"];;
 let array_get = ["callvirt instance object [Runtime]Array::Get(int32)"];;
 let array_set = ["callvirt instance void [Runtime]Array::Set(int32, object)"];;
-let array_copy = ["callvirt instance object [Runtime]Array::getCopy()"];;
-let read_int = ["callvirt instance int32 [Runtime]Reader::readInt()"];;
-let read_bool = ["callvirt instance bool [Runtime]Reader::readBool()"];;
-let read_string = ["callvirt instance string [Runtime]Reader::readString()"];;
-let read_line = ["callvirt instance void [Runtime]Reader::readLine()"];;
+let array_copy_to = ["callvirt instance void [Runtime]Array::CopyTo(object)"];;
+let read_int = ["callvirt instance int32 [Runtime]Reader::ReadInt()"];;
+let read_bool = ["callvirt instance bool [Runtime]Reader::ReadBool()"];;
+let read_string = ["callvirt instance string [Runtime]Reader::ReadString()"];;
+let read_line = ["callvirt instance void [Runtime]Reader::ReadLine()"];;
 
 (** ******************************************** PREAMBLES/FOOTERS ******************************************** *)
 
@@ -117,7 +116,7 @@ let preamble num_locals = [".assembly 'Blaise' {}";
 															"stsfld class [Runtime]Reader r";
 															"ldloc stackframe";
     													"ldc.i4 "^(string_of_int num_locals);
-    													"callvirt instance void [Runtime]StackFrame::initLocals(int32)"];;
+    													"callvirt instance void [Runtime]StackFrame::InitLocals(int32)"];;
 
 let preamble_proc num_proc num_locals = [".method public static hidebysig default void f"^(string_of_int num_proc)^" (object) cil managed";
                   											 "{";
@@ -127,7 +126,7 @@ let preamble_proc num_proc num_locals = [".method public static hidebysig defaul
                   													"stloc stackframe";
                   													"ldloc stackframe";
                   													"ldc.i4 "^(string_of_int num_locals);
-                  													"callvirt instance void [Runtime]StackFrame::initLocals(int32)"];;
+                  													"callvirt instance void [Runtime]StackFrame::InitLocals(int32)"];;
 
 let preamble_fun num_fun num_locals = [".method public static hidebysig default object f"^(string_of_int num_fun)^" (object) cil managed";
                 											 "{";
@@ -137,7 +136,7 @@ let preamble_fun num_fun num_locals = [".method public static hidebysig default 
                 													"stloc stackframe";
                 													"ldloc stackframe";
                 													"ldc.i4 "^(string_of_int num_locals);
-                													"callvirt instance void [Runtime]StackFrame::initLocals(int32)"];;
+                													"callvirt instance void [Runtime]StackFrame::InitLocals(int32)"];;
 let footer = [	"ret";
 							"}"];;
 
@@ -184,11 +183,11 @@ let rec compile_default_type t =
 								let temp_comp = dup @ (ldstr s) @ comp_t @ record_set in
 									prev_comp @ temp_comp 
 														) [] list in
-						new_record @ comp_set_record @ new_cell
+						new_record @ comp_set_record
 
 		| TArray (length , t) -> 
 					let comp_t = compile_default_type t in
-						(ldc length) @ comp_t @ new_array @ new_cell
+						(ldc length) @ comp_t @ new_array
 
   	| TFun (list, _) -> ["ldnull"] @ (ldc 0) @ new_closure
 
@@ -200,18 +199,26 @@ let rec compile_assign t1 t2 =
 	match t1 with
 		| TRef(r1) ->	
 					( match !r1, t2 with
-							| _, TRecord _ ->
-										record_copy @ cell_set
-							| _, TArray _ ->
-										array_copy @ cell_set
-							| _, TFun _ ->
-										closure_copy @ cell_set
-							| _, TProc _ ->
-										closure_copy @ cell_set
+							| TRecord _, TRecord _ ->
+										swap @ record_copy_to
+							| TArray _, TArray _ ->
+										swap @ array_copy_to
+							| TFun _, TFun _ ->
+										swap @ closure_copy_to
+							| TProc _, TProc _ ->
+										swap @ closure_copy_to
 							| _ -> 
 										cell_set
 					)
 		| _ -> [];; (* dummy *)
+
+let rec in_cell t = 
+	match t with
+		| TRef r -> in_cell !r
+		| TNumber -> true
+		| TString -> true
+		| TBoolean -> true
+		| _ -> false;;
 		
 
 (** ******************************************** AUX FUNCTIONS ************************************************ *)
@@ -428,8 +435,9 @@ let rec compile_expr env to_result e =
 					let jumps, offset = find s env in
 					let jump_comp = get_jumps_list jumps [] in
 					let var = is_var t in
+					(*print_string ("var: "^s^" is_var: "^(string_of_bool var)^" type: "^(string_of_iType t));*)
 					let deref = 
-							if var && to_result then
+							if var && to_result && (in_cell t) then
 								cell_get
 							else
 								[] in
@@ -465,7 +473,7 @@ let rec compile_expr env to_result e =
 					let comp_e = compile_expr' e in
 					let var = (is_var t) in
 					let deref = 
-							if var && to_result then
+							if var && to_result && (in_cell t) then
 								cell_get
 							else
 								[] in
@@ -476,7 +484,7 @@ let rec compile_expr env to_result e =
 					let comp_index = compile_expr' index in
 					let var = (is_var t) in
 					let deref = 
-							if var && to_result then
+							if var && to_result && (in_cell t) then
 								cell_get
 							else
 								[] in
@@ -594,7 +602,8 @@ let rec compile_oper env o =
 					let temp_env = assoc "result" args_env in
 					let _, result_addr = find "result" temp_env in
 					let comp_result = (ldloc_stackframe) @ (ldc result_addr) @ (compile_default_type t) @ stack_set in
-					let get_result = ldloc_stackframe @ (ldc result_addr) @ stack_get @ cell_get in
+					let deref = if t = TNumber || t = TString || t = TBoolean then cell_get else [] in
+					let get_result = ldloc_stackframe @ (ldc result_addr) @ stack_get @ deref in
 					let decl_comp, decl_list, decl_env = compile_all_decls consts vars opers temp_env in
 					let comp_s = compile_stat decl_env s in
 					let num_locals = end_locals () in

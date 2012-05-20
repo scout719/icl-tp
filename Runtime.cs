@@ -2,38 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-class Cell {
-	object value;
-	
-	public Cell(object v) {
-		value = v; 
-	}
-	
-	public object get() {
-		return value; 
-	}
-	
-	public void set(object v) {
-			value = v;
-	}
-	
-	public object getCopy(bool to_var) {
-		object copy = null;
-		if(value is Record)
-			copy = ((Record) value).getCopy();
-		else if(value is Array)
-			copy = ((Array) value).getCopy();
-		else if(value is Cell)
-			copy = ((Cell) value).getCopy(to_var);
-		else 
-			copy = value;
-		if (to_var)
-			return new Cell(copy);
-		else
-			return copy;
-	}
-}
-
 class StackFrame {
 	object staticlink; // indice 0
 
@@ -48,16 +16,16 @@ class StackFrame {
 		this.staticlink = SL;
 	}
 	
-	public void initArgs(int nParams) {
+	public void InitArgs(int nParams) {
 		this.nParams = nParams;
 		paramS = new object[nParams];
 	}
 	
-	public void initLocals(int nLocals){
+	public void InitLocals(int nLocals){
 		locals = new object[nLocals];
 	}
 	
-	public object get(int i){
+	public object Get(int i){
 		if(i == 0){
 			return staticlink;
 		} else if(i > nParams ){
@@ -67,7 +35,7 @@ class StackFrame {
 		}
 	}
 	
-	public void set(int i, object o){
+	public void Set(int i, object o){
 		if(i == 0)
 			staticlink = o;
 		else if(i > nParams )
@@ -86,9 +54,39 @@ class Closure {
 		this.ftn = ftn;
 	}
 
-	public StackFrame getSF() { return stackFrame; }
-	public IntPtr getFtn() { return ftn; }
-	public object getCopy() { return new Closure(stackFrame, ftn); }
+	public StackFrame GetSF() {
+		return stackFrame;
+	}
+	
+	public IntPtr GetFtn() {
+		return ftn;
+	}
+	
+	public void SetClosure(Closure new_closure){
+		this.stackFrame = new_closure.GetSF();
+		this.ftn = new_closure.GetFtn();
+	}
+	
+	public void CopyTo(object other){
+		Closure destination = (Closure) other;
+		destination.SetClosure(new Closure(this.stackFrame, this.ftn));
+	}
+}
+
+class Cell {
+	object value;
+	
+	public Cell(object v) {
+		value = v; 
+	}
+	
+	public object Get() {
+		return value; 
+	}
+	
+	public void Set(object v) {
+			value = v;
+	}
 }
 
 public class Record {
@@ -107,26 +105,28 @@ public class Record {
 		this.record.Add(key, val);
 	}
 
-	public object getCopy(){
-		Record copy_ = new Record();
-		Dictionary<string, object> copy = copy_.record;
+	public void CopyTo(object other){
+		Record destination = (Record) other;
 		foreach (KeyValuePair<string, object> pair in record){
 			string key = pair.Key;
 			object val = pair.Value;
 			
 			if(val is Record){
-				object copyR = ((Record) val).getCopy();
-				copy.Add(key, new Cell(copyR));
+				Record rec = (Record) val;
+				rec.CopyTo(destination.GetValue(key));
 			} else if(val is Array) {
-				object copyA = ((Array) val).getCopy();
-				copy.Add(key, new Cell(copyA));
+				Array arr = (Array) val;
+				arr.CopyTo(destination.GetValue(key));
+			} else if(val is Closure) {
+				Closure clo = (Closure) val;
+				clo.CopyTo(destination.GetValue(key));
 			} else if(val is Cell){
-				object copyC = ((Cell) val).getCopy(true);
-				copy.Add(key, copyC);
+				Cell cell = (Cell) val;
+				object val2 = cell.Get();
+				destination.SetValue(key, new Cell(val2));
 			} else 
-				copy.Add(key, new Cell(val));
+				destination.SetValue(key, new Cell(val));		
 		}
-		return copy_;
 	}
 }
 
@@ -140,15 +140,29 @@ public class Array {
 	public Array(int size, object _default_){
 		this.array = new object[size];
 		for (int i = 0; i < size; i++){
-			if (_default_ is Array)
-				array[i] = ((Array)_default_).getCopy();
-			else if ( _default_ is Record)
-				array[i] = ((Record)_default_).getCopy();
-			else if (_default_ is Cell) 
-				array[i] = ((Cell) _default_).getCopy(true);
-			else
-				array[i] = _default_;
+			if (_default_ is Array){
+				Array arr = (Array) _default_;
+				array[i] = new Array(arr.Size());
+				arr.CopyTo(array[i]);
+			} else if ( _default_ is Record) {
+				Record rec = (Record) _default_;
+				array[i] = new Record();
+				rec.CopyTo(array[i]);
+			} else if ( _default_ is Closure) {
+				Closure clo = (Closure) _default_;
+				array[i] = new Closure(null, new IntPtr(0));
+				clo.CopyTo(array[i]);
+			} else if(_default_ is Cell) {
+				Cell cell = (Cell) _default_;
+				object val = cell.Get();
+				array[i] = new Cell(val);
+			} else
+				array[i] = new Cell(_default_);
 		}
+	}
+	
+	public int Size(){
+		return array.Length;
 	}
 	
 	public void Set(int index, object elem){
@@ -159,27 +173,25 @@ public class Array {
 		return array[index];
 	}
 
-	/*
-	public void CopyTo(object destination){
+	public void CopyTo(object other){
+		Array destination = (Array) other;
 		for(int i = 0; i < array.Length; i++){
-			
+			if (array[i] is Array){
+				Array arr = (Array) array[i];
+				arr.CopyTo(destination.Get(i));
+			} else if ( array[i] is Record) {
+				Record rec = (Record) array[i];
+				rec.CopyTo(destination.Get(i));
+			} else if ( array[i] is Closure) {
+				Closure clo = (Closure) array[i];
+				clo.CopyTo(destination.Get(i));
+			} else if(array[i] is Cell) {
+				Cell cell = (Cell) array[i];
+				object val = cell.Get();
+				destination.Set(i, new Cell(val));
+			} else
+				destination.Set(i, new Cell(array[i]));
 		}
-	}
-	*/
-	
-	public object getCopy(){
-		Array copy = new Array(array.Length, null);
-		for (int i = 0; i < array.Length; i++){
-			if (array[i] is Array)
-				copy.Set(i, new Cell(((Array)array[i]).getCopy()));
-			else if ( array[i] is Record)
-				copy.Set(i, new Cell(((Record)array[i]).getCopy()));
-			else if(array[i] is Cell)
-				copy.Set(i, ((Cell) array[i]).getCopy(true));
-			else
-				copy.Set(i, new Cell(array[i]));
-		}
-		return copy;
 	}
 }
 
@@ -192,12 +204,12 @@ public class Reader {
 		buffer = new string[0];
 	}
 	
-	private string read(){
+	private string Read(){
 		if (curr == buffer.Length){
 			Regex r = new Regex(@"\s+");
 			buffer = r.Split(Console.ReadLine());
 			curr = 0;
-			return read();
+			return Read();
 		} else {
 			string token = buffer[curr];
 			curr++;
@@ -205,23 +217,22 @@ public class Reader {
 		}
 	}
 	
-	public int readInt(){
-		string token = read();
+	public int ReadInt(){
+		string token = Read();
 		return Convert.ToInt32(token);
 	}
 	
-	public bool readBool(){
-		string token = read();
+	public bool ReadBool(){
+		string token = Read();
 		return Convert.ToBoolean(token);
 	}
 	
-	public string readString(){
-		return read();
+	public string ReadString(){
+		return Read();
 	}
 	
-	public void readLine(){
+	public void ReadLine(){
 		buffer = new string[0];
 		curr = 0;
 	}
-
 }
