@@ -5,7 +5,7 @@ open Blaise_iType;;
 module StackframeMap = Map.Make (String);;
 
 (** ********************************************     FALTA     ************************************************ *)
-(* criar copia constante para parametro *)
+
 (** ********************************************   COMPILER    ************************************************ *)
 
 exception Not_found;;
@@ -88,11 +88,13 @@ let new_record = ["newobj instance void [Runtime]Record::.ctor()"];;
 let record_get = ["callvirt instance object [Runtime]Record::GetValue(string)"];;
 let record_set = ["callvirt instance void [Runtime]Record::SetValue(string, object)"];;
 let record_copy_to = ["callvirt instance void [Runtime]Record::CopyTo(object)"];;
+let record_const_copy = ["callvirt instance object [Runtime]Record::GetConstCopy()"];;
 let new_array = ["newobj instance void [Runtime]Array::.ctor(int32, object)"];;
 let new_array_no_default = ["newobj instance void [Runtime]Array::.ctor(int32)"];;
 let array_get = ["callvirt instance object [Runtime]Array::Get(int32)"];;
 let array_set = ["callvirt instance void [Runtime]Array::Set(int32, object)"];;
 let array_copy_to = ["callvirt instance void [Runtime]Array::CopyTo(object)"];;
+let array_const_copy = ["callvirt instance object [Runtime]Array::GetConstCopy()"];;
 let read_int = ["callvirt instance int32 [Runtime]Reader::ReadInt()"];;
 let read_bool = ["callvirt instance bool [Runtime]Reader::ReadBool()"];;
 let read_string = ["callvirt instance string [Runtime]Reader::ReadString()"];;
@@ -219,7 +221,18 @@ let rec in_cell t =
 		| TString -> true
 		| TBoolean -> true
 		| _ -> false;;
-		
+
+let rec compile_copy_iType t =
+	match t with
+		| TRef r -> ( match !r with
+										| TNumber -> cell_get
+										| TString -> cell_get
+										| TBoolean -> cell_get
+										| TRecord _ -> record_const_copy
+										| TArray _ -> array_const_copy
+										| _ -> [] (* dummy *)
+								)
+		| _ -> [];;
 
 (** ******************************************** AUX FUNCTIONS ************************************************ *)
 
@@ -422,20 +435,13 @@ let rec compile_expr env to_result e =
 		| Neq (l, r, _) -> 
 					let comp_l = compile_expr' l in
 					let comp_r = compile_expr' r in
-					let type_l = unref_iType (get_type l) in
-					let operation_eq = 
-        				if type_l = TBoolean then
-									compile_bin_oper_bool
-								else
-									compile_bin_oper_int in
-					let comp_eq = operation_eq comp_l comp_r eq in
+					let comp_eq =	compile_bin_oper_obj comp_l comp_r obj_equals in
 						compile_un_oper_bool comp_eq noT
 
 		| Id (s, t)  -> 
 					let jumps, offset = find s env in
 					let jump_comp = get_jumps_list jumps [] in
 					let var = is_var t in
-					(*print_string ("var: "^s^" is_var: "^(string_of_bool var)^" type: "^(string_of_iType t));*)
 					let deref = 
 							if var && to_result && (in_cell t) then
 								cell_get
@@ -448,10 +454,13 @@ let rec compile_expr env to_result e =
     			let (args_comp, last_index) = 
     				List.fold_left( fun (prev_args, prev_index) e ->
     						let comp_e = compile_expr' e in
+								let type_e = get_type e in
+								let copy_value = compile_copy_iType type_e in
     						let new_args_comp = 
     							dup @ 
     							(ldc prev_index) @ 
     							comp_e @ 
+									copy_value @ 
     							stack_set @ 
     							prev_args in
     						let new_index = prev_index + 1 in
@@ -568,9 +577,11 @@ and compile_stat env s =
 					let args_comp, num_args = 
 							List.fold_left (fun (prev_comp, prev_index) e ->
 									let comp_e = compile_expr' e in
+									let type_e = get_type e in
+									let copy_value = compile_copy_iType type_e in
 									let new_index = prev_index + 1 in
 									let new_comp = 
-										dup @ (ldc new_index) @ comp_e @ stack_set @ prev_comp in
+										dup @ (ldc new_index) @ comp_e @ copy_value @ stack_set @ prev_comp in
 									(new_comp, new_index)
 														) ([], 0) list in
 					closure @ 

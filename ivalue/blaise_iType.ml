@@ -11,7 +11,7 @@ type iType =
 	| TObject of string * (string * (iType list) * iType) list
 	| TClass_id of string
 	| TUnit
-	| TNone
+	| TNone (*of string*)
 	| TUndefined;;
 
 let rec unref_iType t =
@@ -43,13 +43,13 @@ let rec string_of_iType t =
 						"TRecord(" ^ list_string ^ " )"
   	| TRef r -> "TRef("^(string_of_iType !r)^")"
   	| TUnit -> "Unit"
-  	| TNone -> "None"
+  	| TNone (*error*) -> "None( "(*^error^" )"*)
   	| TUndefined -> "Undefined";;
 
 let get_type_of_array t =
 	match t with
 		| TArray(_, t) -> t
-		| _ -> TNone;;
+		| _ -> TNone (*"Array expected"*);;
 
 let get_type_of_record s t =
 	match t with
@@ -57,8 +57,9 @@ let get_type_of_record s t =
 					(try
 						List.assoc s list
 					with
-						| Not_found -> TNone)
-		| _ -> TNone;;
+						| Not_found -> TNone (*("Attribute not found("^s^")")*))
+		| _ -> TNone (*"Record expected"*);;
+
 
 let bin_oper_int t1 t2 =
 	match t1, t2 with
@@ -141,6 +142,6 @@ let rec get_reference_to t =
 		| TProc list -> 
 					TRef (ref (TProc list))
 		
-		| TRef r -> get_reference_to !r
+		| TRef r -> TRef (ref t)
 
-		| _ -> TNone;; (* dummy *)
+		| _ -> TNone (*"Internal error"*);; (* dummy *)

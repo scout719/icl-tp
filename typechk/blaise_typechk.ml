@@ -35,13 +35,14 @@ let rec check_assign l r =
 								if length1 = length2 then 
 									check_assign t1 t2
 								else
-									TNone
+									TNone (*"Arrays with diferent lengths"*)
 
 					| TRecord (list1), TRecord (list2) -> 
 								List.fold_left2 ( fun prev_type (s1, t1) (s2, t2) ->
 																			if prev_type = TUnit && s1 = s2 then
 																				check_assign t1 t2
 																			else
+																				
 																				TNone
 																) TUnit list1 list2
 																
@@ -189,7 +190,7 @@ let rec typechk_exp env e =
 		| Eq (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
 					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
-						if (bin_oper_bool t1 t2) || (bin_oper_int t1 t2) then 
+						if (bin_oper_str t1 t2) || (bin_oper_int t1 t2) then 
 							Eq(e1', e2', TBoolean)
 						else
 							Eq(e1', e2', TNone)
@@ -197,7 +198,7 @@ let rec typechk_exp env e =
 		| Neq (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
 					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
-						if (bin_oper_bool t1 t2) || (bin_oper_int t1 t2) then 
+						if (bin_oper_str t1 t2) || (bin_oper_int t1 t2) then 
 							Neq(e1', e2', TBoolean)
 						else
 							Neq(e1', e2', TNone)
@@ -205,7 +206,7 @@ let rec typechk_exp env e =
 		| Gt (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
 					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
-						if (bin_oper_bool t1 t2) || (bin_oper_int t1 t2) then 
+						if bin_oper_int t1 t2 then 
 							Gt(e1', e2', TBoolean)
 						else
 							Gt(e1', e2', TNone)
@@ -213,7 +214,7 @@ let rec typechk_exp env e =
 		| Lt (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
 					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
-						if (bin_oper_bool t1 t2) || (bin_oper_int t1 t2) then 
+						if bin_oper_int t1 t2 then 
 							Lt(e1', e2', TBoolean)
 						else
 							Lt(e1', e2', TNone)
@@ -221,7 +222,7 @@ let rec typechk_exp env e =
 		| Gteq (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
 					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
-						if (bin_oper_bool t1 t2) || (bin_oper_int t1 t2) then 
+						if bin_oper_int t1 t2 then 
 							Gteq(e1', e2', TBoolean)
 						else
 							Gteq(e1', e2', TNone)
@@ -229,7 +230,7 @@ let rec typechk_exp env e =
 		| Lteq (e1, e2, _) ->
 					let e1',e2' = (typechk_exp' e1,typechk_exp' e2) in
 					let t1,t2 = unref_iType (get_type e1'), unref_iType (get_type e2') in
-						if (bin_oper_bool t1 t2) || (bin_oper_int t1 t2) then 
+						if bin_oper_int t1 t2 then 
 							Lteq(e1', e2', TBoolean)
 						else
 							Lteq(e1', e2', TNone)

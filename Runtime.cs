@@ -71,6 +71,7 @@ class Closure {
 		Closure destination = (Closure) other;
 		destination.SetClosure(new Closure(this.stackFrame, this.ftn));
 	}
+	
 }
 
 class Cell {
@@ -87,6 +88,7 @@ class Cell {
 	public void Set(object v) {
 			value = v;
 	}
+	
 }
 
 public class Record {
@@ -127,6 +129,28 @@ public class Record {
 			} else 
 				destination.SetValue(key, new Cell(val));		
 		}
+	}
+	
+	public object GetConstCopy(){
+		Record copy = new Record();
+		foreach (KeyValuePair<string, object> pair in record){
+			string key = pair.Key;
+			object val = pair.Value;
+			
+			if(val is Record){
+				Record rec = (Record) val;
+				copy.SetValue(key, rec.GetConstCopy());
+			} else if(val is Array) {
+				Array arr = (Array) val;
+				copy.SetValue(key, arr.GetConstCopy());
+			} else if(val is Cell){
+				Cell cell = (Cell) val;
+				object val2 = cell.Get();
+				copy.SetValue(key, val2);
+			} else 
+				copy.SetValue(key, val);		
+		}
+		return copy;
 	}
 }
 
@@ -192,6 +216,25 @@ public class Array {
 			} else
 				destination.Set(i, new Cell(array[i]));
 		}
+	}
+
+	public object GetConstCopy(){
+		Array copy = new Array(this.Size());
+		for(int i = 0; i < array.Length; i++){
+			if (array[i] is Array){
+				Array arr = (Array) array[i];
+				copy.Set(i, arr.GetConstCopy());
+			} else if ( array[i] is Record) {
+				Record rec = (Record) array[i];
+				copy.Set(i, rec.GetConstCopy());
+			} else if(array[i] is Cell) {
+				Cell cell = (Cell) array[i];
+				object val = cell.Get();
+				copy.Set(i, val);
+			} else
+				copy.Set(i, array[i]);
+		}
+		return copy;
 	}
 }
 
