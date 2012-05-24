@@ -7,11 +7,11 @@ type iType =
 	| TArray of int * iType
 	| TRecord of (string * iType) list
 	| TRef of iType ref
-	| TClass of string * (string * (iType list) * iType) list
-	| TObject of string * (string * (iType list) * iType) list
+	| TClass of string * (string * iType) list
+	| TObject of string * (string * iType) list
 	| TClass_id of string
 	| TUnit
-	| TNone (*of string*)
+	| TNone of string
 	| TUndefined;;
 
 let rec unref_iType t =
@@ -29,27 +29,59 @@ let rec string_of_iType t =
   	| TNumber -> "Number"
   	| TString -> "String"
   	| TBoolean -> "Boolean"
+
   	| TFun (list, t) -> 
-					let list_string = List.fold_left (fun prev_list t ->
-																								prev_list ^ (string_of_iType t) ^ " "
-																						) "" list in
-						"TFun( " ^ list_string ^ "):" ^ (string_of_iType t)
-  	| TProc _ -> "TProv"
-  	| TArray (_, t) -> "TArray("^(string_of_iType t)^")"
-  	| TRecord list -> 
-					let list_string = List.fold_left ( fun 	prev_list (s, t) ->
-																									prev_list ^ " (" ^ s ^ "," ^ (string_of_iType t) ^")"
-																						) "" list in
-						"TRecord(" ^ list_string ^ " )"
-  	| TRef r -> "TRef("^(string_of_iType !r)^")"
-  	| TUnit -> "Unit"
-  	| TNone (*error*) -> "None( "(*^error^" )"*)
-  	| TUndefined -> "Undefined";;
+					let params_list = List.fold_left (fun prev_list t ->
+																								prev_list @ [string_of_iType t]
+																						) [] list in
+					let list_string = String.concat ", " params_list in
+						"TFun( [" ^ list_string ^ "] ):" ^ (string_of_iType t)
+		
+  	| TProc list -> 
+					let params_list = List.fold_left (fun prev_list t ->
+																								prev_list @ [string_of_iType t]
+																						) [] list in
+					let list_string = String.concat ", " params_list in
+						"TProc( [" ^ list_string ^ "] )"
+		
+  	| TArray (size, t) -> 
+					"TArray( " ^ (string_of_int size) ^ ", " ^ (string_of_iType t)^" ) "
+  	
+		| TRecord list -> 
+					let fields_list = List.fold_left ( fun 	prev_list (s, t) ->
+																									prev_list @ [" (" ^ s ^ "," ^ (string_of_iType t) ^")"]
+																						) [] list in
+					let list_string = String.concat ", " fields_list in
+						"TRecord([ " ^ list_string ^ "] )"
+  	
+		| TRef r -> "TRef("^(string_of_iType !r)^")"
+		
+		| TClass_id id -> "TClass_id ( "^id^" ) "
+		
+		| TObject (name, list) ->
+					let methods_list = List.fold_left ( fun 	prev_list (s, t) ->
+																									prev_list @ ["( " ^ s ^ ", " ^ (string_of_iType t) ^ " )"]
+																						) [] list in
+					let list_string = String.concat ", " methods_list in
+						"TObject( " ^ name ^ ", [ " ^ list_string ^ " ]) "
+		
+		| TClass (name, list) ->
+					let methods_list = List.fold_left ( fun 	prev_list (s, t) ->
+																									prev_list @ ["( " ^ s ^ ", " ^ (string_of_iType t) ^ " )"]
+																						) [] list in
+					let list_string = String.concat ", " methods_list in
+						"TClass( " ^ name ^ ", [ " ^ list_string ^ " ]) "
+  	
+		| TUnit -> "Unit"
+  	
+		| TNone error -> "None ( " ^ error ^ " ) "
+  	
+		| TUndefined -> "Undefined";;
 
 let get_type_of_array t =
 	match t with
 		| TArray(_, t) -> t
-		| _ -> TNone (*"Array expected"*);;
+		| _ -> TNone "Array expected";;
 
 let get_type_of_record s t =
 	match t with
@@ -57,8 +89,8 @@ let get_type_of_record s t =
 					(try
 						List.assoc s list
 					with
-						| Not_found -> TNone (*("Attribute not found("^s^")")*))
-		| _ -> TNone (*"Record expected"*);;
+						| Not_found -> TNone ("Attribute not found("^s^")"))
+		| _ -> TNone "Record expected";;
 
 
 let bin_oper_int t1 t2 =
@@ -100,6 +132,11 @@ let un_oper_record s t =
 	match t with
 		| TRecord list -> List.mem_assoc s list
 		| _ -> false;;
+
+let not_none t =
+	match t with
+		| TNone _ -> false
+		| _ -> true;;
 
 let rec is_readable t =
 	match t with
@@ -144,4 +181,9 @@ let rec get_reference_to t =
 		
 		| TRef r -> TRef (ref t)
 
-		| _ -> TNone (*"Internal error"*);; (* dummy *)
+		| TClass _ -> TRef (ref t)
+
+		| TObject _ -> TRef (ref t)
+
+		| _ -> TNone "Internal error";; (* dummy *)
+

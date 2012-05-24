@@ -107,24 +107,40 @@ let rec assign lvalue rvalue =
 			
 			(* no caso de ser a primeira afectacao o valor por default do proc e none *)
 			| NoneValue, ProcValue _ -> r := rvalue
-			| _ -> raise (Invalid_value ("Values don't match in assign"))
+			| _ -> raise (Invalid_value ("Values don't match in assign: "^(string_of_ivalue lvalue) ^ " " ^(string_of_ivalue rvalue)))
 			)
 			
 	| _ -> raise (Invalid_value ("Ref expected: "^(string_of_ivalue lvalue)))
-
-
 				
 let get_oper_info oper = 
 	match oper with
-		| Function(name, list, _, _, t) -> (name, list, t)
-		| Procedure(name, list, _, _, t) -> (name, list, t)
+		| Function(name, list, _, _, t) -> 
+					let args_types_list = List.fold_left (fun prev_list (_, t) ->
+																											prev_list @ [t]
+																								) [] list in
+						(name, TFun(args_types_list, t))
+
+		| Procedure(name, list, _, _, t) -> 
+					let args_types_list = List.fold_left (fun prev_list (_, t) ->
+																											prev_list @ [t]
+																								) [] list in
+						(name, TProc(args_types_list))
 
 
-let rec get_methods opers = 
+let get_methods opers = 
 	List.fold_left (fun prev_list oper ->
-				let oper_name, args_list, oper_type = get_oper_info oper in
-					prev_list @ [(oper_name, args_list, oper_type)]
+				let oper_info = get_oper_info oper in
+					prev_list @ [oper_info]
 									) [] opers
+
+let get_self_record self_type =
+	match self_type with
+		| TRecord list -> 
+					let new_list = List.fold_left (fun prev_list (s, t) ->
+								prev_list @ [(s, Id(s, t))]
+																				) [] list in
+						Record(new_list, self_type)
+		| _ -> Record([], self_type) (* dummy *)
 
 (***************************************************************************)
 (************************    INTERPRETER EXPR    ***************************)
@@ -152,7 +168,10 @@ let rec evalExp env lvalue e =
 																	evalExp' e
 															) list in
 						ArrayValue( Array.of_list list2)
-		
+
+		| New (e, t) ->
+				evalExp' (CallFun(e, [], t))
+
 		| Add (e1, e2,_) -> 
 				sum_ivalue (toresult' (evalExp' e1)) (toresult' (evalExp' e2))
 		
@@ -225,14 +244,20 @@ let rec evalExp env lvalue e =
 				let exp = evalExp' e in
 				(match exp with
 				| FunValue(listArgs, [consts;vars;opers], s, t, closure_env) -> 
-						let temp_env = evalAllDecls listArgs list consts vars opers env in
-							(* preparar env para ter uma var *)
-							(* result para guardar o resultado da funcao *)
-							let new_env = assoc "result" (RefValue(ref (defaultValue t))) temp_env in 
-								(* avaliar funcao *)
-								evalState new_env s;
-								(* ir buscar o valor ao env *)
-								toresult' (find "result" new_env)
+          	(* criar args *)
+          	let args_env = 
+          		List.fold_left2 (fun prev_env (s, _) e1 -> 
+          													let param = evalExp' e1 in
+          														assoc s param prev_env
+          										) !closure_env listArgs list in
+						let temp_env = evalAllDecls consts vars opers args_env in
+						(* preparar env para ter uma var *)
+						(* result para guardar o resultado da funcao *)
+						let new_env = assoc "result" (RefValue(ref (defaultValue t))) temp_env in 
+							(* avaliar funcao *)
+							evalState new_env s;
+							(* ir buscar o valor ao env *)
+							toresult' (find "result" new_env)
 												
 				| _ -> raise (Invalid_value ("FunValue expected: "^(string_of_ivalue exp)))
 				)
@@ -318,9 +343,16 @@ and evalState env s =
 				let exp = evalExp' e in
 				(match exp with
   				| ProcValue(listArgs, [consts;vars;opers], s, closure_env) -> 
-  						let new_env = evalAllDecls listArgs list consts vars opers env in
-  							(* avaliar procedimento *)
-  							evalState new_env s
+            	(* criar args *)
+            	let args_env = 
+            		List.fold_left2 (fun prev_env (s, _) e1 -> 
+            													let param = evalExp' e1 in
+            														assoc s param prev_env
+            										) !closure_env listArgs list in
+									
+						let new_env = evalAllDecls consts vars opers args_env in
+							(* avaliar procedimento *)
+							evalState new_env s
   												
   				| _ -> raise (Invalid_value ("Proc expected: "^(string_of_ivalue exp)))
 				)
@@ -340,21 +372,38 @@ and evalOpers env o =
 			let closure = FunValue(listArgs, decl, s, t, ref_env) in
 			let new_env = assoc name closure env in
 				ref_env := new_env;
-				(name, new_env)
-						
+				new_env
+
 	| Procedure(name, listArgs, decl, s, _) ->  
 			let ref_env = ref env in
 			let closure = ProcValue(listArgs, decl, s, ref_env) in
 			let new_env = assoc name closure env in
 				ref_env := new_env;
-				(name, new_env)
-	
-(*	| Class (name, [consts; vars; Operations(opers, _)], statement, t) ->
-			let ref_env = ref env in
+				new_env
+
+	| Class (name, [consts; Vars vars; Operations(opers, t1)], statement, t) ->
 			let method_list = get_methods opers in
-			let new_stat = Seq(statement, Assign(Id("result", TRef(ref TNumber)), Id("self", TObject(name, method_list)), TUnit), TUndefined) in
-				("", [])
-*)
+			let self_type = TRecord(method_list) in
+			let self_record = get_self_record self_type in
+			let new_vars = vars @ [(self_type, ["self"])] in
+			let new_statement = 
+				Seq(
+					statement, 
+					Seq(
+							Assign(
+									Id("self", TRef(ref self_type)), 
+									self_record, 
+									TUnit), 
+							Assign(
+									Id("result", TRef(ref self_type)), 
+									Id("self", TRef(ref self_type)), 
+									TUnit), 
+							TUnit), 
+					TUnit) in
+			let new_function = Function(name, [], [consts; Vars new_vars; Operations(opers, t1)], new_statement, self_type) in
+				evalOpers env new_function
+
+	| _ -> env (* dummy *)
 
 (***************************************************************************)
 (************************     INTERPRETER DECLS  ***************************)
@@ -364,20 +413,13 @@ and evalOpers env o =
 (* Funcao que retorna o env actualizado com as varias declaracoes *)
 (* Esta funcao verifica se existe variaveis e constantes repetidas *)
 (* lancando uma excepcao quando isso aconteca *)
-and evalAllDecls listArgs listExpr consts vars opers env =
-	let evalExp' = evalExp env false in
-  	(* criar args *)
-  	let (allArgs, args_env) = 
-  		List.fold_left2 (fun (prev_list, prev_env) (s, _) e1 -> 
-  													let param = evalExp' e1 in
-  														(s::prev_list, assoc s param prev_env)
-  										) ([], env) listArgs listExpr in
+and evalAllDecls consts vars opers env =
 		(* criar consts *)
-		let allConsts, env_consts = evalDecls args_env consts in
+		let env_consts = evalDecls env consts in
 		(* criar vars *)
-		let allVars, env_vars = evalDecls env_consts vars in
+		let env_vars = evalDecls env_consts vars in
 		(* criar opers *)
-		let allOpers, env_opers = evalDecls env_vars opers in
+		let env_opers = evalDecls env_vars opers in
   		env_opers
 
 (* Funcao que avalia um bloco de declaracoes e retorna um env actualizado *)
@@ -387,29 +429,28 @@ and evalDecls env d =
 	(* Verificar se nao existem duplicados e caso nao exista percorrer todas *)
 	(* as declaracoes e criar o novo ambiente *)
 	| Consts (list, _) -> 
-			List.fold_left (fun (prev_consts, prev_env) (x,y) -> 
-														(x::prev_consts, assoc x (evalExp prev_env false y) prev_env)
-											) ([], env) list
+			List.fold_left (fun prev_env (x,y) -> 
+														assoc x (evalExp prev_env false y) prev_env
+											) env list
 												
 	(* Percorrer as varias listas e criar uma lista com todas as variaveis e *)
 	(* criar o novo ambiente, depois verificar se nao ha duplicados e se nao *)
 	(* houver retornar o ambiente com as variaveis inicializadas *)
-	| Vars (list, _) -> 
-			List.fold_left (fun (prev_vars, prev_env) (t, l) -> 
+	| Vars list -> 
+			List.fold_left (fun prev_env (t, l) -> 
 														let temp_env = 
-															List.fold_left (fun prev s -> 
+																List.fold_left (fun prev s -> 
 																										assoc s (RefValue(ref (defaultValue t))) prev
-																							) prev_env l in
-															(l @ prev_vars, temp_env)
-											) ([], env) list
+																								) prev_env l in
+															temp_env
+											) env list
 
 	(* Percorrer todas as declaracoes de funcoes e procedimentos e avaliar *)
 	(* cada declaracao e retornar o ambiente *)
 	| Operations (list, _) -> 
-			List.fold_left (fun (prev_opers, prev_env) x ->
-														let (name, new_env) = evalOpers prev_env x in
-															(name::prev_opers, new_env)
-											) ([], env) list
+			List.fold_left (fun prev_env x ->
+													evalOpers prev_env x
+											) env list
 
 
 (***************************************************************************)
@@ -425,7 +466,7 @@ let evalProgram p =
 			(* Avaliar cada parte do bloco das declaracoes, juntar tudo num env e *)
 			(* enviar para a avaliacao do corpo principal do programa *)
 			| Program(name, [consts; vars; opers], s, _) -> 
-					let env = evalAllDecls [] [] consts vars opers EnvMap.empty in
+					let env = evalAllDecls consts vars opers EnvMap.empty in
 					let _ = evalState env s in
 						()
 									

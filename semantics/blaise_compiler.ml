@@ -225,14 +225,41 @@ let rec in_cell t =
 let rec compile_copy_iType t =
 	match t with
 		| TRef r -> ( match !r with
-										| TNumber -> cell_get
-										| TString -> cell_get
-										| TBoolean -> cell_get
 										| TRecord _ -> record_const_copy
 										| TArray _ -> array_const_copy
 										| _ -> [] (* dummy *)
 								)
 		| _ -> [];;
+				
+let get_oper_info oper = 
+	match oper with
+		| Function(name, list, _, _, t) -> 
+					let args_types_list = List.fold_left (fun prev_list (_, t) ->
+																											prev_list @ [t]
+																								) [] list in
+						(name, TFun(args_types_list, t))
+
+		| Procedure(name, list, _, _, t) -> 
+					let args_types_list = List.fold_left (fun prev_list (_, t) ->
+																											prev_list @ [t]
+																								) [] list in
+						(name, TProc(args_types_list));;
+
+
+let get_methods opers = 
+	List.fold_left (fun prev_list oper ->
+				let oper_info = get_oper_info oper in
+					prev_list @ [oper_info]
+									) [] opers;;
+
+let get_self_record self_type =
+	match self_type with
+		| TRecord list -> 
+					let new_list = List.fold_left (fun prev_list (s, t) ->
+								prev_list @ [(s, Id(s, t))]
+																				) [] list in
+						Record(new_list, self_type)
+		| _ -> Record([], self_type);; (* dummy *)
 
 (** ******************************************** AUX FUNCTIONS ************************************************ *)
 
@@ -329,6 +356,9 @@ let rec compile_expr env to_result e =
 									prev_comp @ temp_comp 
 														) [] list in
 						new_record @ comp_set_record
+
+		| New (e, t) ->
+					compile_expr' (CallFun(e, [], t))
 
 		| Add (l, r, t) -> 
 					let comp_l = compile_expr' l in
@@ -460,7 +490,7 @@ let rec compile_expr env to_result e =
     							dup @ 
     							(ldc prev_index) @ 
     							comp_e @ 
-									copy_value @ 
+									copy_value @
     							stack_set @ 
     							prev_args in
     						let new_index = prev_index + 1 in
@@ -581,7 +611,12 @@ and compile_stat env s =
 									let copy_value = compile_copy_iType type_e in
 									let new_index = prev_index + 1 in
 									let new_comp = 
-										dup @ (ldc new_index) @ comp_e @ copy_value @ stack_set @ prev_comp in
+										dup @ 
+										(ldc new_index) @ 
+										comp_e @ 
+										copy_value @
+										stack_set @ 
+										prev_comp in
 									(new_comp, new_index)
 														) ([], 0) list in
 					closure @ 
@@ -613,7 +648,7 @@ let rec compile_oper env o =
 					let temp_env = assoc "result" args_env in
 					let _, result_addr = find "result" temp_env in
 					let comp_result = (ldloc_stackframe) @ (ldc result_addr) @ (compile_default_type t) @ stack_set in
-					let deref = if t = TNumber || t = TString || t = TBoolean then cell_get else [] in
+					let deref = if in_cell t then cell_get else [] in
 					let get_result = ldloc_stackframe @ (ldc result_addr) @ stack_get @ deref in
 					let decl_comp, decl_list, decl_env = compile_all_decls consts vars opers temp_env in
 					let comp_s = compile_stat decl_env s in
@@ -639,12 +674,34 @@ let rec compile_oper env o =
 					let comp_proc = (preamble_proc id num_locals) @ decl_comp @ comp_s @ footer in
 					let comp_set_closure = ldloc_stackframe @ (ldc recursive_addr) @ comp_closure @ stack_set in
 						(comp_set_closure, comp_proc @ decl_list, new_env)
+		
+		| Class (name, [consts; Vars vars; Operations(opers, t1)], statement, t) ->
+      		let method_list = get_methods opers in
+      		let self_type = TRecord(method_list) in
+      		let self_record = get_self_record self_type in
+      		let new_vars = vars @ [(self_type, ["self"])] in
+      		let new_statement = 
+      			Seq(
+      				statement, 
+      				Seq(
+      						Assign(
+      								Id("self", TRef(ref self_type)), 
+      								self_record, 
+      								TUnit), 
+      						Assign(
+      								Id("result", TRef(ref self_type)), 
+      								Id("self", TRef(ref self_type)), 
+      								TUnit), 
+      						TUnit), 
+      				TUnit) in
+      		let new_function = Function(name, [], [consts; Vars new_vars; Operations(opers, t1)], new_statement, self_type) in
+      			compile_oper env new_function
 
 		| _ -> ([], [] ,[]) (* dummy *)
 
 and compile_decl env d =
 	match d with
-		| Vars (list, _) ->
+		| Vars list ->
 					let (vars_comp, vars_env) = 
 						List.fold_left ( fun 	(prev_comp, prev_env) (t, list2) ->
 								List.fold_left ( fun (prev_comp, prev_env) s -> 

@@ -127,7 +127,7 @@ public class Record {
 				object val2 = cell.Get();
 				destination.SetValue(key, new Cell(val2));
 			} else 
-				destination.SetValue(key, new Cell(val));		
+				destination.SetValue(key, new Cell(val));
 		}
 	}
 	

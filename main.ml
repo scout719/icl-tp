@@ -11,11 +11,12 @@ let rec prompt lexbuf =
   try
   	let s = Blaise_parser.main Blaise_lexer.token lexbuf in
 			let p = typechk_program s in
-				(* print_string ("Terminal:\n"); (evalProgram s); (print_string "\n") *)
-				if (get_type_program p) <> TNone then
+				(* print_string "Terminal:\n"; evalProgram s; print_string "\n"; *)
+				if not_none (get_type_program p) then
 					List.iter (fun s -> print_string (s ^ "\n")) (compile_program p)
 				else
-					print_string "Invalid Program"
+					print_string "Invalid Program:\n";
+					print_string (unparse_program p)
 			(* print_string (string_of_iType (get_type_program (typechk_program s))) *)
 			(* prompt lexbuf *)
   with

@@ -15,7 +15,7 @@ open Blaise_iType
 %token PLUS MINUS MULT DIV GT GTEQ LT LTEQ AND OR EQUAL MOD NEQ
 %token ASSIGN
 
-%token CLASS TOBJECT TCLASS NEW SELF
+%token CLASS TOBJECT TCLASS NEW
 
 %token INTEGER STRING ARRAY REC FUN PROC BOOL
 
@@ -46,8 +46,8 @@ decl_block:
 ;
 
 var_block:
-  VAR decl_id_list { Vars($2, TUndefined)}
-| { Vars([], TUndefined) }
+  VAR decl_id_list { Vars($2)}
+| { Vars([]) }
 ;
 
 const_block:
@@ -188,13 +188,12 @@ un_op:
   factor { $1 }
 | NOT factor { Not($2,TUndefined) }
 | MINUS factor { Compl($2,TUndefined) }
-| NEW ID { New($2, TUndefined) }
+| NEW ID { New(Id($2, TUndefined), TUndefined) }
 ;
 
 factor:
   NUM { Number($1) }
 | STRING_CONST { String($1) }
-| SELF { Self(TUndefined) }
 | ID { Id($1,TUndefined) }
 | LPAR expr RPAR { $2 }
 | TRUE { Boolean(true) }
@@ -256,8 +255,8 @@ methods_list:
 ;
 
 method_decl:
-	ID LPAR type_decl_list RPAR COLON type_decl { ($1, $3, TUnit) }
-|	ID LPAR type_decl_list RPAR %prec NO_RETURN { ($1, $3, TUnit) }
+	ID LPAR type_decl_list RPAR COLON type_decl { ($1, TFun($3, $6)) }
+|	ID LPAR type_decl_list RPAR %prec NO_RETURN { ($1, TProc($3)) }
 ;
 
 func_type:

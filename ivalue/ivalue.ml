@@ -28,6 +28,11 @@ let rec defaultValue t =
 	| TRecord list -> 
 			let record = List.fold_left (fun prev (s, t1) -> RecordMap.add s (RefValue(ref (defaultValue t1))) prev) RecordMap.empty list in
 				RecordValue(record)
+	| TObject (x, list) ->
+			let new_list = List.fold_left( fun prev_list (s, _) ->
+					prev_list @ [(s, TNone "dummy")]
+																		) [] list in
+				defaultValue (TRecord(new_list))
 	| _ -> NoneValue
 
 let rec sum_ivalue e1 e2 =

@@ -62,7 +62,6 @@ rule token = parse
 	| "Class" { TCLASS }
 	| "Object" { TOBJECT }
 	| "new" { NEW }
-	| "self" { SELF }
 	| "Proc" { PROC }
 	| "!quit" { QUIT }
 	| "class" { CLASS }
