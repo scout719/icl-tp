@@ -78,6 +78,131 @@ let rec string_of_iType t =
   	
 		| TUndefined -> "Undefined";;
 
+let rec contains t1 t2 compare_list =
+	List.fold_left (fun prev_found (t1', t2') ->
+											if t1' = t1 && t2' = t2 then
+												true
+											else
+												prev_found
+									) false compare_list
+
+let rec equals env compare_list t1 t2 =
+	let equals' = equals env compare_list in
+	
+	(* print_string ("left: "^(string_of_iType t1)^"\nright: "^(string_of_iType t2)^"\n\n"); *)
+	
+	match t1, t2 with
+		| TRecord list1, TRecord list2 ->
+					List.fold_left2 (fun prev_equals (s1, t1) (s2, t2) ->
+								prev_equals && s1 = s2 && (equals' t1 t2)
+													) true list1 list2
+
+		| TArray (size1, t1), TArray (size2, t2) ->
+					size1 = size2 && (equals' t1 t2)
+
+		| TRef r1, TRef r2 ->
+					equals' !r1 !r2
+
+		| TFun (list1, t1), TFun (list2, t2) ->
+					let matching_args = List.fold_left2 (fun prev_match t1' t2' ->
+																									prev_match && (equals' t1' t2')
+																							) true list1 list2 in
+						matching_args && equals' t1 t2
+
+		| TProc list1, TProc list2 ->
+					List.fold_left2 (fun prev_match t1' t2' ->
+															(equals' t1' t2') && prev_match
+													) true list1 list2
+
+		| TClass_id name1, TClass_id name2 -> 
+					let list1 = List.assoc name1 env in
+					let new_t1 = TObject("", list1) in
+					let list2 = List.assoc name2 env in
+					let new_t2 = TObject("", list2) in
+						equals' new_t1 new_t2
+
+		| TNone _, TNone _ -> 
+					true
+
+		| TObject (name1, list1) , TObject (name2, list2) ->
+					if contains t1 t2 compare_list then
+						true
+					else
+						let new_compare_list = (t1, t2)::compare_list in
+    				let new_env1 = if name1 <> "" then (name1, list1)::env else env in
+    				let new_env2 = if name2 <> "" then (name2, list2)::new_env1 else new_env1 in
+    					List.fold_left2 (fun prev_compare (s1, t1) (s2, t2) ->
+    																if prev_compare && s1 = s2 && equals new_env2 new_compare_list t1 t2 then
+    																	true
+    																else 
+    																	false
+    													) true list1 list2
+
+		| TObject _ , TClass_id name2 ->
+					let list2 = List.assoc name2 env in
+					let new_t2 = TObject("", list2) in
+						equals' t1 new_t2
+
+		| TClass_id name1, TObject _ ->
+					let list1 = List.assoc name1 env in
+					let new_t1 = TObject("", list1) in
+						equals' new_t1 t2
+
+		| _ ->
+					t1 = t2
+
+let rec subst name t t_method =
+	match t_method with
+		| TArray (length, t') -> TArray (length, (subst name t t'))
+  	| TRecord list -> 
+					let new_list = List.fold_left (fun prev_list (s, t') ->
+																							prev_list @ [(s, subst name t t')]
+																				) [] list in
+						TRecord new_list
+
+  	| TRef r -> 
+					TRef (ref (subst name t !r))
+
+  	| TClass_id s -> 
+					if s = name then
+						t
+					else
+						TClass_id s
+
+		| TFun (list, t') -> 
+					let new_list = List.fold_left (fun prev_list t'' ->
+																							prev_list @ [subst name t t'']
+																				) [] list in
+					let new_t = subst name t t' in
+							TFun(new_list, new_t)
+
+		| TProc list -> 
+					let new_list = List.fold_left (fun prev_list t'' ->
+																							prev_list @ [subst name t t'']
+																				) [] list in
+							TProc new_list
+
+  	| TClass (s, list) ->
+					if s <> name then (
+						let new_list = List.fold_left (fun prev_list (s, t') ->
+																							prev_list @ [(s, subst name t t')]
+																					) [] list in
+							TClass (s, new_list)
+					) else (
+						TClass (s, list)
+					)
+
+  	| TObject (s, list) ->
+					if s <> name then (
+						let new_list = List.fold_left (fun prev_list (s, t') ->
+																							prev_list @ [(s, subst name t t')]
+																					) [] list in
+							TObject (s, new_list)
+					) else (
+						TObject (s, list)
+					)
+		| _ -> t_method
+
 let get_type_of_array t =
 	match t with
 		| TArray(_, t) -> t
@@ -90,6 +215,14 @@ let get_type_of_record s t =
 						List.assoc s list
 					with
 						| Not_found -> TNone ("Attribute not found("^s^")"))
+
+		| TObject (name, list) ->
+    			(try
+    				let t_method = List.assoc s list in
+							subst name t t_method
+    			with
+    				| Not_found -> TNone ("Method not found("^s^")"))
+
 		| _ -> TNone "Record expected";;
 
 
@@ -131,6 +264,7 @@ let un_oper_array t =
 let un_oper_record s t =
 	match t with
 		| TRecord list -> List.mem_assoc s list
+		| TObject (name, list)-> List.mem_assoc s list
 		| _ -> false;;
 
 let not_none t =

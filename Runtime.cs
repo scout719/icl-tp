@@ -99,7 +99,8 @@ public class Record {
 	}
 	
 	public object GetValue(string key){
-		return record[key];
+		object t = record[key];
+		return t;
 	}
 	
 	public void SetValue(string key, object val){

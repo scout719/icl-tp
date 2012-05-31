@@ -33,6 +33,7 @@ let rec defaultValue t =
 					prev_list @ [(s, TNone "dummy")]
 																		) [] list in
 				defaultValue (TRecord(new_list))
+	| TClass_id _ -> RecordValue(RecordMap.empty)
 	| _ -> NoneValue
 
 let rec sum_ivalue e1 e2 =

@@ -3,6 +3,10 @@ open Blaise_iType
 
 exception Type_check_error of string;;
 
+(**
+		Falta no getrecord substituir se for Class_id(X) por TObject... 
+*)
+
 module TypeEnvMap = Map.Make (String);;
 
 type env = string * iType TypeEnvMap.t;;
@@ -46,28 +50,19 @@ let rec check_assign l r =
 																) TUnit list1 list2
 
 					| TFun (list1, t1), TFun (list2, t2) ->
-								let matching_args = List.fold_left2 (fun prev_match t1' t2' ->
-																												t1' = t2' && prev_match
-																										) true list1 list2 in
-									if matching_args && t1 = t2 then
-										TUnit
-									else
-										TNone "Functions with diferent parameters"
+								if equals [] [] !lr r then
+									TUnit
+								else
+									TNone "Functions with diferent parameters"
 
 					| TProc list1, TProc list2 ->
-								let matching_args = List.fold_left2 (fun prev_match t1' t2' ->
-																												t1' = t2' && prev_match
-																										) true list1 list2 in
-									if matching_args then
-										TUnit
-									else
-										TNone "Procedures with diferent parameters"
-
-					(* | TObject (name1, list1), TObject (name2, list2) -> *)
-					(* 			                                              *)
+								if equals [] [] !lr r then
+									TUnit
+								else
+									TNone "Procedures with diferent parameters"
 
 					| tl, tr -> 
-								if tl = (unref_iType tr) then
+								if equals [] [] tl (unref_iType tr) then
 									TUnit
 								else
 									TNone "Types not matching"
@@ -75,35 +70,7 @@ let rec check_assign l r =
 		| _ -> TNone "TRef expected on left of assign";;
 
 let rec check_matching_types t1 t2 =
-	match t1, unref_iType t2 with
-		| TNumber , TNumber -> true
-		| TString, TString -> true
-		| TBoolean, TBoolean -> true
-		| TArray (length1, t1'), TArray (length2, t2') -> 
-					if length1 = length2 then
-						check_matching_types t1' t2'
-					else
-						false
-						
-		| TRecord list1, TRecord list2 -> 
-					List.fold_left2 (fun prev_match (s1, t1') (s2, t2') -> 
-								prev_match && s1 = s2 && (check_matching_types t1' t2')
-													) true list1 list2
-													
-		| TFun (list1, t1'), TFun(list2, t2') ->
-					if check_matching_types t1' t2' then
-						List.fold_left2 (fun prev_match t1'' t2'' -> 
-								prev_match && (check_matching_types t1'' t2'')
-													) true list1 list2
-					else
-						false
-						
-		| TProc list1, TProc list2 ->
-					List.fold_left2 (fun prev_match t1' t2' -> 
-								prev_match && (check_matching_types t1' t2')
-													) true list1 list2
-		
-		| _ -> false;;
+	equals [] [] (check_assign (TRef(ref t1)) t2) TUnit
 				
 let get_oper_info oper = 
 	match oper with
@@ -153,6 +120,7 @@ let get_object_type t =
 
 let rec typechk_exp env e =
 	let typechk_exp' = typechk_exp env in
+	let equals' = equals [] [] in
 	match e with
 		| Number n -> Number n
 		
@@ -168,7 +136,7 @@ let rec typechk_exp env e =
   											let e' = typechk_exp' e in
 												let t = unref_iType (get_type e') in
   												if 	not_none prev_type && 
-															(t = prev_type || prev_type = TUndefined) then
+															(equals' t prev_type) || (equals' prev_type TUndefined) then
   													(prev_list @ [e'], t)
   												else 
   													(prev_list @ [e'], TNone "elements with diferent types")
@@ -358,6 +326,7 @@ let rec typechk_exp env e =
 let rec typechk_stat env s =
 	let typechk_exp' = typechk_exp env in
 	let typechk_stat' = typechk_stat env in
+	let equals' = equals [] [] in
 		match s with
 			| Assign (l, r, _) ->
 						let l', r' = typechk_exp' l, typechk_exp' r in
@@ -368,13 +337,13 @@ let rec typechk_stat env s =
 			| Seq (l, r, _) ->
 						let l', r' = typechk_stat' l, typechk_stat' r in
 						let t1, t2 = get_type_stat l', get_type_stat r' in
-						let seq_type = if t1 = TUnit && t2 = TUnit then TUnit else TNone "Invalid types in Seq" in
+						let seq_type = if (equals' t1 TUnit) && (equals' t2 TUnit) then TUnit else TNone "Invalid types in Seq" in
 								Seq(l', r', seq_type)
 			
 			| If (e, s, _) -> 
 						let e', s' = typechk_exp' e, typechk_stat' s in
 						let t1, t2 = unref_iType (get_type e'), get_type_stat s' in
-						let if_type = if t1 = TBoolean then t2 else TNone "Invalid types in if" in
+						let if_type = if equals' t1 TBoolean then t2 else TNone "Invalid types in if" in
 							If(e', s', if_type)
 			
 			| If_Else (e, s1, s2, _) ->
@@ -384,15 +353,15 @@ let rec typechk_stat env s =
 						let t1, t2,t3 = unref_iType (get_type e'), 
 														get_type_stat s1', 
 														get_type_stat s2' in
-						let if_type = if 	t1 = TBoolean && 
-															t2 = TUnit && 
-															t3 = TUnit then TUnit else TNone "Invalid types in If_Else" in
+						let if_type = if 	(equals' t1 TBoolean) && 
+															(equals' t2 TUnit) && 
+															(equals' t3 TUnit) then TUnit else TNone "Invalid types in If_Else" in
 							If_Else(e', s1', s2', if_type)
 			
 			| While (e, s, _) ->
 						let e', s' = typechk_exp' e, typechk_stat' s in
 						let t1, t2 = unref_iType (get_type e'), get_type_stat s' in
-						let while_type = if t1 = TBoolean then t2 else TNone "Invalid types in While" in
+						let while_type = if (equals' t1 TBoolean) then t2 else TNone "Invalid types in While" in
 							While(e', s', while_type)
 			
 			| Write (list, _) -> 
@@ -431,8 +400,7 @@ let rec typechk_stat env s =
   		| CallProc(e, args_list, _) -> 
   					let e' = typechk_exp' e in
   					let t = unref_iType (get_type e') in
-  					let args_list' = 
-  								List.map( fun e -> typechk_exp' e) args_list in
+  					let args_list' = List.map( fun e -> typechk_exp' e) args_list in
   						(match t with
   							| TProc params_types -> 
   										let matching_types = List.fold_left2 (fun prev_match e' t2 ->
@@ -454,9 +422,9 @@ and typechk_all_decls env consts vars opers =
 				let consts_type = get_type_decl consts' in
 				let vars_type = get_type_decl vars' in
 				let opers_type = get_type_decl opers' in
-					if consts_type = TUnit &&
-							vars_type = TUnit &&
-							opers_type = TUnit then
+					if (equals [] [] consts_type TUnit) &&
+							(equals [] [] vars_type TUnit) &&
+							(equals [] [] opers_type TUnit) then
 						([consts'; vars'; opers'], env_opers, TUnit)
 					else
 						([consts'; vars'; opers'], env_opers, TNone "Decls not well typed")

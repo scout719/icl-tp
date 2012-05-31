@@ -195,6 +195,10 @@ let rec compile_default_type t =
 
   	| TProc list -> ["ldnull"] @ (ldc 0) @ new_closure
 		
+		| TObject (name, list) -> compile_default_type (TRecord list)
+
+		| TClass_id _ -> new_record
+						
 		| _ -> [] (* dummy *);;
 
 let rec compile_assign t1 t2 =
@@ -331,6 +335,7 @@ let rec get_jumps_list n list =
 
 let rec compile_expr env to_result e =
 	let compile_expr' = compile_expr env true in
+	let equals' = equals [] [] in
 	match e with
 		| Number n -> ldc_int32 n
 
@@ -364,7 +369,7 @@ let rec compile_expr env to_result e =
 					let comp_l = compile_expr' l in
 					let comp_r = compile_expr' r in
 					let (operation, oper_code) = 
-								if t = TNumber then
+								if (equals' t TNumber) then
 									(compile_bin_oper_int, add)
 								else
 									(compile_bin_oper_obj, string_concat) in
@@ -417,49 +422,25 @@ let rec compile_expr env to_result e =
 		| Gt (l, r, _) -> 
 					let comp_l = compile_expr' l in
 					let comp_r = compile_expr' r in
-					let type_l = unref_iType (get_type l) in
-					let operation = 
-								if type_l = TBoolean then
-									compile_bin_oper_bool
-								else
-									compile_bin_oper_int in
-						operation comp_l comp_r gt
+						compile_bin_oper_int comp_l comp_r gt
 
 		| Lt (l, r, _) -> 
 					let comp_l = compile_expr' l in
 					let comp_r = compile_expr' r in
-					let type_l = unref_iType (get_type l) in
-					let operation = 
-								if type_l = TBoolean then
-									compile_bin_oper_bool
-								else
-									compile_bin_oper_int in
-						operation comp_l comp_r lt
+						compile_bin_oper_int comp_l comp_r lt
 
 		| Gteq (l, r, _) -> 
 					let comp_l = compile_expr' l in
 					let comp_r = compile_expr' r in
-					let type_l = unref_iType (get_type l) in
-					let operation = 
-								if type_l = TBoolean then
-									compile_bin_oper_bool
-								else
-									compile_bin_oper_int in
-					let comp_gt = operation comp_l comp_r gt in
-					let comp_eq = operation comp_l comp_r eq in
+					let comp_gt = compile_bin_oper_int comp_l comp_r gt in
+					let comp_eq = compile_bin_oper_int comp_l comp_r eq in
 						compile_bin_oper_bool comp_gt comp_eq oR
 
 		| Lteq (l, r, _) -> 
 					let comp_l = compile_expr' l in
 					let comp_r = compile_expr' r in
-					let type_l = unref_iType (get_type l) in
-					let operation = 
-								if type_l = TBoolean then
-									compile_bin_oper_bool
-								else
-									compile_bin_oper_int in
-					let comp_lt = operation comp_l comp_r lt in
-					let comp_eq = operation comp_l comp_r eq in
+					let comp_lt = compile_bin_oper_int comp_l comp_r lt in
+					let comp_eq = compile_bin_oper_int comp_l comp_r eq in
 						compile_bin_oper_bool comp_lt comp_eq oR
 
 		| Neq (l, r, _) -> 
@@ -695,9 +676,8 @@ let rec compile_oper env o =
       						TUnit), 
       				TUnit) in
       		let new_function = Function(name, [], [consts; Vars new_vars; Operations(opers, t1)], new_statement, self_type) in
+					(* print_string ((unparse_oper new_function)^"\n"); *)
       			compile_oper env new_function
-
-		| _ -> ([], [] ,[]) (* dummy *)
 
 and compile_decl env d =
 	match d with

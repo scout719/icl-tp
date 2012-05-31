@@ -10,6 +10,10 @@ exception Index_out_of_bounds
 exception Invalid_value_to_read of string
 exception Invalid_value of string
 
+(**
+	quando se esta a criar o record a apartir do objecto ter em atençao os CLass_id
+*)
+
 let buffer = ref [];;
 
 let clearBuffer () = buffer := [];;
