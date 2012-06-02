@@ -15,7 +15,7 @@ let rec prompt lexbuf =
 					List.iter (fun s -> print_string (s ^ "\n")) (compile_program p)
 				else (
 					print_string "Invalid Program:\n";
-					(* print_string (unparse_program p) *)
+					print_string (unparse_program p)
 				)
 			
 			(* print_string "Terminal:\n"; evalProgram s; print_string "\n"; *)

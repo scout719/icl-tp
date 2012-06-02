@@ -92,6 +92,8 @@ let rec equals env compare_list t1 t2 =
 	(* print_string ("left: "^(string_of_iType t1)^"\nright: "^(string_of_iType t2)^"\n\n"); *)
 	
 	match t1, t2 with
+		| TRef r1, _ -> equals' !r1 t2
+		| _, TRef r2 -> equals' t1 !r2
 		| TRecord list1, TRecord list2 ->
 					List.fold_left2 (fun prev_equals (s1, t1) (s2, t2) ->
 								prev_equals && s1 = s2 && (equals' t1 t2)
@@ -99,9 +101,6 @@ let rec equals env compare_list t1 t2 =
 
 		| TArray (size1, t1), TArray (size2, t2) ->
 					size1 = size2 && (equals' t1 t2)
-
-		| TRef r1, TRef r2 ->
-					equals' !r1 !r2
 
 		| TFun (list1, t1), TFun (list2, t2) ->
 					let matching_args = List.fold_left2 (fun prev_match t1' t2' ->

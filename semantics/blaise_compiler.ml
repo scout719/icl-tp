@@ -46,7 +46,7 @@ let div = "div" :: box_int32;;
 let rem = "rem" :: box_int32;;
 let anD = "and" :: box_bool;;
 let oR = "or" :: box_bool;;
-let noT = "neg" :: "not" :: box_bool;;
+let noT = (ldc 0) @ ["ceq"] @ box_bool;;
 let eq = "ceq" :: box_bool;;
 let gt = "cgt" :: box_bool;;
 let lt = "clt" :: box_bool;;
@@ -201,22 +201,21 @@ let rec compile_default_type t =
 						
 		| _ -> [] (* dummy *);;
 
-let rec compile_assign t1 t2 =
+let rec compile_assign t1 =
+	(* print_string ((string_of_iType t1)^"\n"); *)
 	match t1 with
-		| TRef(r1) ->	
-					( match !r1, t2 with
-							| TRecord _, TRecord _ ->
-										swap @ record_copy_to
-							| TArray _, TArray _ ->
-										swap @ array_copy_to
-							| TFun _, TFun _ ->
-										swap @ closure_copy_to
-							| TProc _, TProc _ ->
-										swap @ closure_copy_to
-							| _ -> 
-										cell_set
-					)
-		| _ -> [];; (* dummy *)
+		| TRecord _ ->
+					swap @ record_copy_to
+		| TArray _ ->
+					swap @ array_copy_to
+		| TFun _ ->
+					swap @ closure_copy_to
+		| TProc _ ->
+					swap @ closure_copy_to
+		| TObject _ ->
+					swap @ record_copy_to
+		| _ -> 
+					cell_set
 
 let rec in_cell t = 
 	match t with
@@ -519,9 +518,8 @@ and compile_stat env s =
 		| Assign (l, r, _) ->
 					let comp_l = compile_expr env false l in
 					let comp_r = compile_expr' r in
-					let l_type = get_type l in
-					let r_type = unref_iType (get_type r) in
-					let comp_assign = compile_assign l_type r_type in
+					let l_type = unref_iType (get_type l) in
+					let comp_assign = compile_assign l_type in
 						comp_l @ comp_r @ comp_assign
 
 		| Seq(l, r, _) ->

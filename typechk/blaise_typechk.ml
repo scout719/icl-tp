@@ -70,7 +70,7 @@ let rec check_assign l r =
 		| _ -> TNone "TRef expected on left of assign";;
 
 let rec check_matching_types t1 t2 =
-	equals [] [] (check_assign (TRef(ref t1)) t2) TUnit
+	equals [] [] t1 t2
 				
 let get_oper_info oper = 
 	match oper with
