@@ -15,6 +15,7 @@ and ivalue =
 	| RefValue of ivalue ref
 	| FunValue of ((string * iType) list) * (decl_block list) * statement * iType * env ref
 	| ProcValue of ((string * iType) list) * (decl_block list) * statement * env ref
+	| CustomValue
 	| NoneValue
 
 let rec defaultValue t =
@@ -33,7 +34,7 @@ let rec defaultValue t =
 					prev_list @ [(s, TNone "dummy")]
 																		) [] list in
 				defaultValue (TRecord(new_list))
-	| TClass_id _ -> RecordValue(RecordMap.empty)
+	| TClass_id _ -> CustomValue
 	| _ -> NoneValue
 
 let rec sum_ivalue e1 e2 =
@@ -124,4 +125,5 @@ let rec string_of_ivalue e =
 														
 	| ProcValue _ -> "Procedure's closure"
 	| FunValue _ -> "Function's closure"
+	| CustomValue -> "CustomValue"
 	| NoneValue -> "NoneValue"

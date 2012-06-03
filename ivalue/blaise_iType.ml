@@ -1,3 +1,5 @@
+module MyMap = Map.Make (String);;
+
 type iType =
 	| TNumber
 	| TString
@@ -24,6 +26,60 @@ let is_var t =
 		| TRef _ -> true
 		| _ -> false;;
 
+let rec unfold_type env t =
+	match t with
+		| TClass_id s ->
+					( try
+        		unfold_type env (MyMap.find s env)
+        	with Not_found -> TNone "Type not found"
+					)
+
+		(* | _ -> t;; *)
+		| TNumber -> t
+  	| TString -> t
+  	| TBoolean -> t
+
+  	| TFun (list, t) -> 
+					let params_list = List.map (fun t ->
+																					unfold_type env t
+  																		) list in
+						TFun(params_list, unfold_type env t)
+		
+  	| TProc list -> 
+					let params_list = List.map (fun t ->
+																					unfold_type env t
+																			) list in
+						TProc(params_list)
+		
+  	| TArray (size, t) -> 
+					TArray( size, unfold_type env t)
+  	
+		| TRecord list -> 
+					let fields_list = List.map ( fun 	(s, t) ->
+																						(s,unfold_type env t)
+																		) list in
+						TRecord(fields_list)
+  	
+		| TRef r -> TRef(ref (unfold_type env t))
+		
+		| TObject (name, list) ->
+					let methods_list = List.map ( fun (s, t) ->
+																						(s, unfold_type env t)
+																			) list in
+						TObject( name, methods_list)
+		
+		| TClass (name, list) ->
+					let methods_list = List.map ( fun (s, t) ->
+																						(s, unfold_type env t)
+																			) list in
+						TClass( name, methods_list)
+  	
+		| TUnit -> TUnit
+  	
+		| TNone error -> TNone ( error )
+  	
+		| TUndefined -> TUndefined;;
+
 let rec string_of_iType t =
 	match t with
   	| TNumber -> "Number"
@@ -31,16 +87,12 @@ let rec string_of_iType t =
   	| TBoolean -> "Boolean"
 
   	| TFun (list, t) -> 
-					let params_list = List.fold_left (fun prev_list t ->
-																								prev_list @ [string_of_iType t]
-																						) [] list in
+					let params_list = List.map (fun t -> string_of_iType t) list in
 					let list_string = String.concat ", " params_list in
 						"TFun( [" ^ list_string ^ "] ):" ^ (string_of_iType t)
 		
   	| TProc list -> 
-					let params_list = List.fold_left (fun prev_list t ->
-																								prev_list @ [string_of_iType t]
-																						) [] list in
+					let params_list = List.map (fun t -> string_of_iType t) list in
 					let list_string = String.concat ", " params_list in
 						"TProc( [" ^ list_string ^ "] )"
 		
@@ -48,9 +100,10 @@ let rec string_of_iType t =
 					"TArray( " ^ (string_of_int size) ^ ", " ^ (string_of_iType t)^" ) "
   	
 		| TRecord list -> 
-					let fields_list = List.fold_left ( fun 	prev_list (s, t) ->
-																									prev_list @ [" (" ^ s ^ "," ^ (string_of_iType t) ^")"]
-																						) [] list in
+					let fields_list = 
+								List.map (fun (s, t) -> 
+															" (" ^ s ^ "," ^ (string_of_iType t) ^")"
+													) list in
 					let list_string = String.concat ", " fields_list in
 						"TRecord([ " ^ list_string ^ "] )"
   	
@@ -59,16 +112,18 @@ let rec string_of_iType t =
 		| TClass_id id -> "TClass_id ( "^id^" ) "
 		
 		| TObject (name, list) ->
-					let methods_list = List.fold_left ( fun 	prev_list (s, t) ->
-																									prev_list @ ["( " ^ s ^ ", " ^ (string_of_iType t) ^ " )"]
-																						) [] list in
+					let methods_list = 
+								List.map (fun (s, t) ->
+															"( " ^ s ^ ", " ^ (string_of_iType t) ^ " )"
+													) list in
 					let list_string = String.concat ", " methods_list in
 						"TObject( " ^ name ^ ", [ " ^ list_string ^ " ]) "
 		
 		| TClass (name, list) ->
-					let methods_list = List.fold_left ( fun 	prev_list (s, t) ->
-																									prev_list @ ["( " ^ s ^ ", " ^ (string_of_iType t) ^ " )"]
-																						) [] list in
+					let methods_list = 
+								List.map (fun (s, t) ->
+															"( " ^ s ^ ", " ^ (string_of_iType t) ^ " )"
+													) list in
 					let list_string = String.concat ", " methods_list in
 						"TClass( " ^ name ^ ", [ " ^ list_string ^ " ]) "
   	
@@ -86,77 +141,76 @@ let rec contains t1 t2 compare_list =
 												prev_found
 									) false compare_list
 
+
+
 let rec equals env compare_list t1 t2 =
-	let equals' = equals env compare_list in
-	
-	(* print_string ("left: "^(string_of_iType t1)^"\nright: "^(string_of_iType t2)^"\n\n"); *)
-	
-	match t1, t2 with
-		| TRef r1, _ -> equals' !r1 t2
-		| _, TRef r2 -> equals' t1 !r2
-		| TRecord list1, TRecord list2 ->
-					List.fold_left2 (fun prev_equals (s1, t1) (s2, t2) ->
-								prev_equals && s1 = s2 && (equals' t1 t2)
-													) true list1 list2
-
-		| TArray (size1, t1), TArray (size2, t2) ->
-					size1 = size2 && (equals' t1 t2)
-
-		| TFun (list1, t1), TFun (list2, t2) ->
-					let matching_args = List.fold_left2 (fun prev_match t1' t2' ->
-																									prev_match && (equals' t1' t2')
-																							) true list1 list2 in
-						matching_args && equals' t1 t2
-
-		| TProc list1, TProc list2 ->
-					List.fold_left2 (fun prev_match t1' t2' ->
-															(equals' t1' t2') && prev_match
-													) true list1 list2
-
-		| TClass_id name1, TClass_id name2 -> 
-					let list1 = List.assoc name1 env in
-					let new_t1 = TObject("", list1) in
-					let list2 = List.assoc name2 env in
-					let new_t2 = TObject("", list2) in
-						equals' new_t1 new_t2
-
-		| TNone _, TNone _ -> 
-					true
-
-		| TObject (name1, list1) , TObject (name2, list2) ->
-					if contains t1 t2 compare_list then
-						true
-					else
-						let new_compare_list = (t1, t2)::compare_list in
-    				let new_env1 = if name1 <> "" then (name1, list1)::env else env in
-    				let new_env2 = if name2 <> "" then (name2, list2)::new_env1 else new_env1 in
-    					List.fold_left2 (fun prev_compare (s1, t1) (s2, t2) ->
-    																if prev_compare && s1 = s2 && equals new_env2 new_compare_list t1 t2 then
-    																	true
-    																else 
-    																	false
-    													) true list1 list2
-
-		| TObject _ , TClass_id name2 ->
-					let list2 = List.assoc name2 env in
-					let new_t2 = TObject("", list2) in
-						equals' t1 new_t2
-
-		| TClass_id name1, TObject _ ->
-					let list1 = List.assoc name1 env in
-					let new_t1 = TObject("", list1) in
-						equals' new_t1 t2
-
-		| _ ->
-					t1 = t2
+  (* if contains t1 t2 compare_list then                *)
+  (* 	true                                             *)
+  (* else                                               *)
+  (* 	let new_compare_list = (t1, t2)::compare_list in *)
+  (* 	let equals' = equals env new_compare_list in     *)
+  	let equals' = equals env compare_list in
+  	
+  	(* print_string ("left: "^(string_of_iType t1)^"\nright: "^(string_of_iType t2)^"\n\n"); *)
+  	match t1, t2 with
+  		| TRef r1, _ -> equals' !r1 t2
+  		| _, TRef r2 -> equals' t1 !r2
+  		| TRecord list1, TRecord list2 ->
+  					List.fold_left2 (fun prev_equals (s1, t1) (s2, t2) ->
+  								prev_equals && s1 = s2 && (equals' t1 t2)
+  													) true list1 list2
+  
+  		| TArray (size1, t1), TArray (size2, t2) ->
+  					size1 = size2 && (equals' t1 t2)
+  
+  		| TFun (list1, t1), TFun (list2, t2) ->
+  					let matching_args = List.fold_left2 (fun prev_match t1' t2' ->
+  																									prev_match && (equals' t1' t2')
+  																							) true list1 list2 in
+  						matching_args && equals' t1 t2
+  
+  		| TProc list1, TProc list2 ->
+  					List.fold_left2 (fun prev_match t1' t2' ->
+  															(equals' t1' t2') && prev_match
+  													) true list1 list2
+  
+  		| TClass_id name1, _ -> 
+            let list1 = List.assoc name1 env in
+            let new_t1 = TObject("", list1) in
+              equals' new_t1 t2
+  
+  		| _, TClass_id name2 -> 
+            let list2 = List.assoc name2 env in
+            let new_t2 = TObject("", list2) in
+              equals' t1 new_t2
+  
+  		| TNone _, TNone _ -> 
+  					true
+  
+  		| TObject (name1, list1) , TObject (name2, list2) ->
+            if contains t1 t2 compare_list then
+              true
+            else
+              let new_compare_list = (t1, t2)::compare_list in
+              let new_env1 = if name1 <> "" then (name1, list1)::env else env in
+              let new_env2 = if name2 <> "" then (name2, list2)::new_env1 else new_env1 in
+      					List.fold_left2 (fun prev_compare (s1, t1) (s2, t2) ->
+													if prev_compare && s1 = s2 && equals new_env2 new_compare_list t1 t2 then
+														true
+													else 
+														false
+										) true list1 list2
+  
+  		| _ ->
+  					t1 = t2
 
 let rec subst name t t_method =
 	match t_method with
 		| TArray (length, t') -> TArray (length, (subst name t t'))
   	| TRecord list -> 
-					let new_list = List.fold_left (fun prev_list (s, t') ->
-																							prev_list @ [(s, subst name t t')]
-																				) [] list in
+					let new_list = List.map (fun (s, t') ->
+																				(s, subst name t t')
+																	) list in
 						TRecord new_list
 
   	| TRef r -> 
@@ -169,23 +223,23 @@ let rec subst name t t_method =
 						TClass_id s
 
 		| TFun (list, t') -> 
-					let new_list = List.fold_left (fun prev_list t'' ->
-																							prev_list @ [subst name t t'']
-																				) [] list in
+					let new_list = List.map (fun t'' ->
+																				subst name t t''
+																	) list in
 					let new_t = subst name t t' in
 							TFun(new_list, new_t)
 
 		| TProc list -> 
-					let new_list = List.fold_left (fun prev_list t'' ->
-																							prev_list @ [subst name t t'']
-																				) [] list in
+					let new_list = List.map (fun t'' ->
+																				subst name t t''
+																	) list in
 							TProc new_list
 
   	| TClass (s, list) ->
 					if s <> name then (
-						let new_list = List.fold_left (fun prev_list (s, t') ->
-																							prev_list @ [(s, subst name t t')]
-																					) [] list in
+						let new_list = List.map (fun (s, t') ->
+																					(s, subst name t t')
+																		) list in
 							TClass (s, new_list)
 					) else (
 						TClass (s, list)
@@ -193,9 +247,9 @@ let rec subst name t t_method =
 
   	| TObject (s, list) ->
 					if s <> name then (
-						let new_list = List.fold_left (fun prev_list (s, t') ->
-																							prev_list @ [(s, subst name t t')]
-																					) [] list in
+						let new_list = List.map (fun (s, t') ->
+																					(s, subst name t t')
+																		) list in
 							TObject (s, new_list)
 					) else (
 						TObject (s, list)
@@ -207,11 +261,12 @@ let get_type_of_array t =
 		| TArray(_, t) -> t
 		| _ -> TNone "Array expected";;
 
-let get_type_of_record s t =
+let get_type_of_record env s t =
 	match t with
 		| TRecord list -> 
 					(try
-						List.assoc s list
+						let t' = List.assoc s list in
+							(*unfold_type env*) t'
 					with
 						| Not_found -> TNone ("Attribute not found("^s^")"))
 
@@ -288,35 +343,21 @@ let rec is_writable t =
 		| TBoolean -> true
 		| _ -> false;;
 
-let rec get_reference_to t =
+let rec get_reference_to env t =
 	match t with
-		| TNumber -> TRef(ref TNumber)
-		
-		| TString -> TRef(ref TString)
-		
-		| TBoolean -> TRef(ref TBoolean)
-		
 		| TArray (length, t') -> 
-					TRef (ref (TArray(length, (get_reference_to t'))))
+					TRef (ref (TArray(length, (get_reference_to env t'))))
 		
 		| TRecord list -> 
 					let list' = 
-							List.fold_left (fun prev_list (s, t') ->
-																	prev_list @ [(s, get_reference_to t')]
-															) [] list in
+							List.map (fun (s, t') ->
+														(s, get_reference_to env t')
+												) list in
 					TRef (ref (TRecord list'))
-		
-		| TFun (list, t) -> 
-					TRef (ref (TFun(list, t)))
 
-		| TProc list -> 
-					TRef (ref (TProc list))
-		
-		| TRef r -> TRef (ref t)
+		| TClass_id s -> 
+					let t' = MyMap.find s env in
+						get_reference_to env t'
 
-		| TClass _ -> TRef (ref t)
-
-		| TObject _ -> TRef (ref t)
-
-		| _ -> TNone "Internal error";; (* dummy *)
+		| _ -> TRef (ref t);;
 

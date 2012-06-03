@@ -3,15 +3,11 @@ open Blaise_iType
 
 exception Type_check_error of string;;
 
-(**
-		Falta no getrecord substituir se for Class_id(X) por TObject... 
-*)
-
 module TypeEnvMap = Map.Make (String);;
 
 type env = string * iType TypeEnvMap.t;;
 
-let find s env =
+let rec find s env =
 	try
 		TypeEnvMap.find s env
 	with Not_found -> raise (Type_check_error ("Id not found: " ^ s));;
@@ -31,20 +27,21 @@ let check_duplicates list =
 									else
 										()) list;;
 
-let rec check_assign l r =
+let rec check_assign env l r =
+	(* print_string ("left: "^(string_of_iType l)^"\nright: "^(string_of_iType r)^"\n\n"); *)
 	match l with
 		| TRef lr -> 
 				( match !lr, r with
 					| TArray (length1, t1), TArray (length2, t2) -> 
 								if length1 = length2 then 
-									check_assign t1 t2
+									check_assign env t1 t2
 								else
 									TNone "Arrays with diferent lengths"
 
 					| TRecord (list1), TRecord (list2) -> 
 								List.fold_left2 ( fun prev_type (s1, t1) (s2, t2) ->
 																			if prev_type = TUnit && s1 = s2 then
-																				check_assign t1 t2
+																				check_assign env t1 t2
 																			else
 																				TNone "Records with diferent fields"
 																) TUnit list1 list2
@@ -69,46 +66,37 @@ let rec check_assign l r =
 				)
 		| _ -> TNone "TRef expected on left of assign";;
 
-let rec check_matching_types t1 t2 =
+let rec check_matching_types env t1 t2 =
 	equals [] [] t1 t2
 				
-let get_oper_info oper = 
+let get_oper_info env oper = 
 	match oper with
 		| Function(name, list, _, _, t) -> 
-					let args_types_list = List.fold_left (fun prev_list (_, t) ->
-																											prev_list @ [t]
-																								) [] list in
+					let args_types_list = List.map (fun (_, t) -> t) list in
 						(name, TFun(args_types_list, t))
 
 		| Procedure(name, list, _, _, t) -> 
-					let args_types_list = List.fold_left (fun prev_list (_, t) ->
-																											prev_list @ [t]
-																								) [] list in
+					let args_types_list = List.map (fun (_, t) -> t) list in
 						(name, TProc(args_types_list))
 
 		| _ -> ("", TNone "dummy");; (* dummy *)
 
-let get_methods opers =
+let get_methods env opers =
 	match opers with
 		| Operations(opers, _) ->
-					List.fold_left (fun prev_list oper ->
-          		let oper_info = get_oper_info oper in
-          			prev_list @ [oper_info]
-          							) [] opers
+					List.map (fun oper -> get_oper_info env oper) opers
 		
 		| _ -> [];; (* dummy *)
 
 let get_self_record self_type =
 	match self_type with
 		| TRecord list ->
-					let new_list = List.fold_left (fun prev_list (s, t) ->
-          			prev_list @ [(s, Id(s, t))]
-          															) [] list in
+					let new_list = List.map (fun (s, t) -> (s, Id(s, t))) list in
           	Record(new_list, self_type)
 		
 		| _ -> Record([], TNone "dummy");; (* dummy *)
 
-let is_class t =
+let rec is_class t =
 	match t with
 		| TClass _ -> true
 		| _ -> false;;
@@ -285,7 +273,8 @@ let rec typechk_exp env e =
 							Not(e', TNone "Invalid type in Not")
 
 		| Id (s, _) -> 
-					Id(s, find s env)
+					let t = find s env in
+						Id(s, t)
 
 		| GetArray(e1, e2, _) ->
 					let e1',e2' = typechk_exp' e1,typechk_exp' e2 in
@@ -299,7 +288,7 @@ let rec typechk_exp env e =
 		| GetRecord(e, s, _) -> 
 					let e' = typechk_exp' e in
 					let t = unref_iType (get_type e') in
-					let record_type = get_type_of_record s t in
+					let record_type = get_type_of_record env s t in
 						if un_oper_record s t then
 							GetRecord(e', s, record_type)
 						else
@@ -314,7 +303,7 @@ let rec typechk_exp env e =
 							| TFun (params_types, t) -> 
 										let matching_types = List.fold_left2 (fun prev_match e' t2 ->
 																													let t1 = unref_iType (get_type e') in
-																														(check_matching_types t2 t1) && prev_match
+																														(check_matching_types env t2 t1) && prev_match
 																													) true args_list' params_types in
 											if matching_types then
 												CallFun(e', args_list', t)
@@ -331,7 +320,7 @@ let rec typechk_stat env s =
 			| Assign (l, r, _) ->
 						let l', r' = typechk_exp' l, typechk_exp' r in
 						let t1, t2 = get_type l', unref_iType (get_type r') in
-						let assign_type = check_assign t1 t2 in
+						let assign_type = check_assign env t1 t2 in
 							Assign(l', r', assign_type)
 								
 			| Seq (l, r, _) ->
@@ -405,7 +394,7 @@ let rec typechk_stat env s =
   							| TProc params_types -> 
   										let matching_types = List.fold_left2 (fun prev_match e' t2 ->
         																										let t1 = unref_iType (get_type e') in
-																															(check_matching_types t2 t1) && prev_match
+																															(check_matching_types env t2 t1) && prev_match
   																													) true args_list' params_types in
   											if matching_types then
   												CallProc(e', args_list', TUnit)
@@ -414,24 +403,26 @@ let rec typechk_stat env s =
   							| _ -> CallProc(e', args_list', TNone "Invalid closure in CallProc")
   						)
 						
-and typechk_all_decls env consts vars opers =
+and typechk_all_decls env types consts vars opers =
 			let all_consts ,consts', env_consts = typechk_decl env consts in
 			let all_vars, vars', env_vars = typechk_decl env_consts vars in
 			let all_opers, opers', env_opers = typechk_decl env_vars opers in
 				check_duplicates (all_consts @ all_vars @ all_opers);
+				(* let types_type = get_type_decl types' in *)
 				let consts_type = get_type_decl consts' in
 				let vars_type = get_type_decl vars' in
 				let opers_type = get_type_decl opers' in
-					if (equals [] [] consts_type TUnit) &&
+					if (*(equals [] [] types_type TUnit) &&*)
+							(equals [] [] consts_type TUnit) &&
 							(equals [] [] vars_type TUnit) &&
 							(equals [] [] opers_type TUnit) then
-						([consts'; vars'; opers'], env_opers, TUnit)
+						([types; consts'; vars'; opers'], env_opers, TUnit)
 					else
-						([consts'; vars'; opers'], env_opers, TNone "Decls not well typed")
+						([types; consts'; vars'; opers'], env_opers, TNone "Decls not well typed")
 
 and typechk_oper env o =
 	match o with
-		| Function (name, args_list, [consts; vars; opers],  s, t) -> 
+		| Function (name, args_list, [types; consts; vars; opers],  s, t) -> 
       		let all_args, new_env = List.fold_left (
       																	fun (prev_args, prev_env) (s, t) -> 
       																			(prev_args @ [s], assoc s t prev_env)
@@ -439,14 +430,14 @@ and typechk_oper env o =
       			check_duplicates all_args;
 					let args_type_list = List.map (fun (_, t) -> t) args_list in
 					let recursive_env = assoc name (TFun ( args_type_list, t)) new_env in
-					let decl_block, temp_env, decl_type = typechk_all_decls recursive_env consts vars opers in
-					let new_env = assoc "result" (get_reference_to t) temp_env in
+					let decl_block, temp_env, decl_type = typechk_all_decls recursive_env types consts vars opers in
+					let new_env = assoc "result" (get_reference_to env t) temp_env in
 					let s' = typechk_stat new_env s in
 					let fun_type = if not_none (get_type_stat s') && not_none decl_type then t else TNone ("Invalid function: "^name) in
 					let final_env = assoc name (TFun ( args_type_list, fun_type)) env in
 						(name, Function (name, args_list, decl_block, s', fun_type), final_env)
 		
-		| Procedure (name, args_list, [consts; vars; opers], s, _) -> 
+		| Procedure (name, args_list, [types; consts; vars; opers], s, _) -> 
       		let all_args, new_env = List.fold_left (
       																	fun (prev_args, prev_env) (s, t) -> 
       																			(prev_args @ [s], assoc s t prev_env)
@@ -454,20 +445,20 @@ and typechk_oper env o =
       			check_duplicates all_args;
 					let args_type_list = List.map (fun (_, t) -> t) args_list in
 					let recursive_env = assoc name (TProc (args_type_list)) new_env in
-					let decl_block, temp_env, decl_type = typechk_all_decls recursive_env consts vars opers in
+					let decl_block, temp_env, decl_type = typechk_all_decls recursive_env types consts vars opers in
 					let s' = typechk_stat temp_env s in
 					let s_type = get_type_stat s' in
 					let final_env = assoc name (TProc ( args_type_list)) env in
 					let final_type = if not_none decl_type && not_none s_type then TUnit else TNone ("Invalid procedure: "^name) in
 						(name, Procedure (name, args_list, decl_block, s', final_type), final_env)
 		
-		| Class (name, [consts; vars; opers], statement, _) -> 
-					let method_list = get_methods opers in
-					let class_type = TClass(name, method_list) in
+		| Class (name, [types; consts; vars; opers], statement, _) -> 
+					let method_list = get_methods env opers in
+					let class_type = TClass("", method_list) in
         	let self_type = TObject("", method_list) in
 					let new_env1 = assoc name class_type env in
 					let new_env = assoc "self" self_type new_env1 in
-					let decl_block, temp_env, decl_type = typechk_all_decls new_env consts vars opers in
+					let decl_block, temp_env, decl_type = typechk_all_decls new_env types consts vars opers in
 					let statement' = typechk_stat temp_env statement in
 					let stat_type = get_type_stat statement' in
 					let final_type = if not_none stat_type && not_none decl_type then class_type else TNone ("Invalid Class: "^name) in
@@ -478,12 +469,18 @@ and typechk_oper env o =
 
 and typechk_decl env d =
 		match d with	
+			| Types list -> 
+      			let all_types, types_env =
+							List.fold_left (fun (prev_types, prev_env) (s, t) -> 
+																			(prev_types @ [s], assoc s t prev_env)
+															) ([], env) list in
+							(all_types, Types list, types_env)
 			| Vars list -> 
       			let all_vars, vars_env =
 							List.fold_left (fun (prev_vars, prev_env) (t, l) -> 
       														let temp_env = 
       															List.fold_left (fun prev s -> 
-      																										assoc s (get_reference_to t) prev
+      																										assoc s (get_reference_to env t) prev
       																							) prev_env l in
       															(prev_vars @ l, temp_env)
       												) ([], env) list in
@@ -515,8 +512,8 @@ and typechk_decl env d =
 
 let typechk_program p =
 	match p with
-		| Program(name, [consts; vars; opers], s, _) -> 
-				let decl_block , env, decl_type = typechk_all_decls TypeEnvMap.empty consts vars opers in
+		| Program(name, [types; consts; vars; opers], s, _) -> 
+				let decl_block , env, decl_type = typechk_all_decls TypeEnvMap.empty types consts vars opers in
 				let s' = typechk_stat env s in
 				let t = get_type_stat s' in
 					if not_none decl_type && not_none t then

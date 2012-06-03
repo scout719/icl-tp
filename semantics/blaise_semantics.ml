@@ -10,10 +10,6 @@ exception Index_out_of_bounds
 exception Invalid_value_to_read of string
 exception Invalid_value of string
 
-(**
-	quando se esta a criar o record a apartir do objecto ter em atençao os CLass_id
-*)
-
 let buffer = ref [];;
 
 let clearBuffer () = buffer := [];;
@@ -91,13 +87,13 @@ let rec assign lvalue rvalue =
 			| ArrayValue array, ArrayValue array2 -> 
 					Array.iteri (fun index elem -> 
 													let rValElem = toresult false (Array.get array2 index) in
-														assign elem rValElem; ()
+														assign elem rValElem
 											) array
 												
 			| RecordValue record, RecordValue record2 -> 
 					RecordMap.iter (fun k v -> 
 														let rValElem = toresult false (RecordMap.find k record2) in
-															assign v rValElem; ()
+															assign v rValElem
 													) record 
 														
 			| NumberValue _, NumberValue _ -> r := rvalue
@@ -111,6 +107,7 @@ let rec assign lvalue rvalue =
 			
 			(* no caso de ser a primeira afectacao o valor por default do proc e none *)
 			| NoneValue, ProcValue _ -> r := rvalue
+			| CustomValue, _ -> r := rvalue
 			| _ -> raise (Invalid_value ("Values don't match in assign: "^(string_of_ivalue lvalue) ^ " " ^(string_of_ivalue rvalue)))
 			)
 			
@@ -130,11 +127,16 @@ let get_oper_info oper =
 																								) [] list in
 						(name, TProc(args_types_list))
 
+		| _ -> ("", TNone "") (* ignore classes *)
+
 
 let get_methods opers = 
 	List.fold_left (fun prev_list oper ->
 				let oper_info = get_oper_info oper in
-					prev_list @ [oper_info]
+					if oper_info <> ("", TNone "") then
+						prev_list @ [oper_info]
+					else
+						prev_list
 									) [] opers
 
 let get_self_record self_type =
@@ -228,6 +230,7 @@ let rec evalExp env lvalue e =
 				or_ivalue (toresult' (evalExp' e1)) (toresult' (evalExp' e2))
 		
 		| Not (e,_) -> not_ivalue (toresult' (evalExp' e))
+
 		| Id (s,_) -> toresult' (find s env)
 		
 		| GetRecord (e, s,_) -> 
@@ -247,14 +250,15 @@ let rec evalExp env lvalue e =
 		| CallFun (e, list,_) -> 
 				let exp = evalExp' e in
 				(match exp with
-				| FunValue(listArgs, [consts;vars;opers], s, t, closure_env) -> 
+				| FunValue(listArgs, [types;consts;vars;opers], s, t, closure_env) -> 
           	(* criar args *)
           	let args_env = 
           		List.fold_left2 (fun prev_env (s, _) e1 -> 
           													let param = evalExp' e1 in
           														assoc s param prev_env
           										) !closure_env listArgs list in
-						let temp_env = evalAllDecls consts vars opers args_env in
+						let temp_env = evalAllDecls types consts vars opers args_env in
+						print_string ((string_of_iType t)^"\n");
 						(* preparar env para ter uma var *)
 						(* result para guardar o resultado da funcao *)
 						let new_env = assoc "result" (RefValue(ref (defaultValue t))) temp_env in 
@@ -346,7 +350,7 @@ and evalState env s =
 		| CallProc (e, list, _) -> 
 				let exp = evalExp' e in
 				(match exp with
-  				| ProcValue(listArgs, [consts;vars;opers], s, closure_env) -> 
+  				| ProcValue(listArgs, [types;consts;vars;opers], s, closure_env) -> 
             	(* criar args *)
             	let args_env = 
             		List.fold_left2 (fun prev_env (s, _) e1 -> 
@@ -354,7 +358,7 @@ and evalState env s =
             														assoc s param prev_env
             										) !closure_env listArgs list in
 									
-						let new_env = evalAllDecls consts vars opers args_env in
+						let new_env = evalAllDecls types consts vars opers args_env in
 							(* avaliar procedimento *)
 							evalState new_env s
   												
@@ -385,7 +389,7 @@ and evalOpers env o =
 				ref_env := new_env;
 				new_env
 
-	| Class (name, [consts; Vars vars; Operations(opers, t1)], statement, t) ->
+	| Class (name, [types; consts; Vars vars; Operations(opers, t1)], statement, t) ->
 			let method_list = get_methods opers in
 			let self_type = TRecord(method_list) in
 			let self_record = get_self_record self_type in
@@ -404,7 +408,7 @@ and evalOpers env o =
 									TUnit), 
 							TUnit), 
 					TUnit) in
-			let new_function = Function(name, [], [consts; Vars new_vars; Operations(opers, t1)], new_statement, self_type) in
+			let new_function = Function(name, [], [types; consts; Vars new_vars; Operations(opers, t1)], new_statement, self_type) in
 				evalOpers env new_function
 
 	| _ -> env (* dummy *)
@@ -417,7 +421,7 @@ and evalOpers env o =
 (* Funcao que retorna o env actualizado com as varias declaracoes *)
 (* Esta funcao verifica se existe variaveis e constantes repetidas *)
 (* lancando uma excepcao quando isso aconteca *)
-and evalAllDecls consts vars opers env =
+and evalAllDecls types consts vars opers env =
 		(* criar consts *)
 		let env_consts = evalDecls env consts in
 		(* criar vars *)
@@ -469,9 +473,8 @@ let evalProgram p =
 		match p with
 			(* Avaliar cada parte do bloco das declaracoes, juntar tudo num env e *)
 			(* enviar para a avaliacao do corpo principal do programa *)
-			| Program(name, [consts; vars; opers], s, _) -> 
-					let env = evalAllDecls consts vars opers EnvMap.empty in
-					let _ = evalState env s in
-						()
+			| Program(name, [types; consts; vars; opers], s, _) -> 
+					let env = evalAllDecls types consts vars opers EnvMap.empty in
+					evalState env s
 									
 			| _ -> () (* dummy *)

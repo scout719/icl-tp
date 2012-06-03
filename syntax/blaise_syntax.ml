@@ -40,6 +40,7 @@ type statement =
 	| CallProc of expr * (expr list) * iType;;
 
 type decl_block =
+	| Types of (string * iType) list
 	| Consts of (string * expr) list * iType
 	| Vars of (iType * (string list)) list
 	| Operations of oper list * iType
@@ -97,7 +98,8 @@ let get_type_decl d =
 	match d with
 		| Vars _ -> TUnit
 		| Consts (_, t) -> t
-		| Operations (_, t) -> t;;
+		| Operations (_, t) -> t
+		| Types (_) -> TUnit;;
 
 let get_type_oper o =
 	match o with
@@ -127,18 +129,16 @@ and unparse_expr e =
 		| Boolean b -> "Boolean ( " ^ (string_of_bool b) ^ " ) "
 		
 		| Record (list, t) ->
-					let all_fields = List.fold_left (fun prev_unparse (s, e) ->
+					let all_fields = List.map (fun (s, e) ->
 								let e_unparsed = unparse_expr e in
-									prev_unparse @ ["( " ^ s ^ ", " ^ e_unparsed ^ " )"]
-																					) [] list in
+									"( " ^ s ^ ", " ^ e_unparsed ^ " )"
+																		) list in
 					let fields_unparsed = String.concat "; " all_fields in
 						"Record ( [" ^ fields_unparsed ^ "], " ^ (string_of_iType t) ^ " ) "
 		
 		| Array (list, t) ->
-					let all_elems = List.fold_left (fun prev_unparse e ->
-								let e_unparsed = unparse_expr e in
-									prev_unparse @ [e_unparsed]
-																					) [] list in
+					let all_elems = List.map (fun e -> unparse_expr e
+																		) list in
 					let elems_unparsed = String.concat "; " all_elems in
 						"Array ( [" ^ elems_unparsed ^ "], " ^ (string_of_iType t) ^ " ) "
 		
@@ -203,10 +203,7 @@ and unparse_expr e =
 						"GetRecord ( " ^ record_unparsed ^ ", " ^ field ^ ", " ^ (string_of_iType t) ^ " ) "
 						
 		| CallFun (e, e_list, t) ->
-					let all_expr = List.fold_left (fun prev_unparse e ->
-								let e_unparsed = unparse_expr e in
-									prev_unparse @ [e_unparsed]
-																				) [] e_list in
+					let all_expr = List.map (fun e -> unparse_expr e) e_list in
 					let closure_unparsed = unparse_expr e in
 					let expr_unparsed = String.concat "; " all_expr in
 						"CallFun ( " ^ closure_unparsed ^ ", [" ^ expr_unparsed ^ "], " ^ (string_of_iType t) ^ " ) "
@@ -240,42 +237,29 @@ let rec unparse_statement s =
 						"While ( " ^ e_unparsed ^ ", " ^ s_unparsed ^ ", " ^ (string_of_iType t) ^ " ) "
 
 		| Write (list, t) ->
-					let all_expr = List.fold_left (fun prev_unparse e ->
-								let e_unparsed = unparse_expr e in
-									prev_unparse @ [e_unparsed]
-																				) [] list in
+					let all_expr = List.map (fun e -> unparse_expr e) list in
 					let expr_unparsed = String.concat "; " all_expr in
 						"Write ( [" ^ expr_unparsed ^ "], " ^ (string_of_iType t) ^ " ) "
 
 		| WriteLn (list, t) ->
-					let all_expr = List.fold_left (fun prev_unparse e ->
-								let e_unparsed = unparse_expr e in
-									prev_unparse @ [e_unparsed]
-																				) [] list in
+					let all_expr = List.map (fun e -> unparse_expr e) list in
 					let expr_unparsed = String.concat "; " all_expr in
 						"WriteLn ( [" ^ expr_unparsed ^ "], " ^ (string_of_iType t) ^ " ) "
 
 		| Read (list, t_list, t) ->
-					let all_types = List.fold_left (fun prev_unparse t ->
-								prev_unparse @ [string_of_iType t]
-																					) [] t_list in
+					let all_types = List.map (fun t -> string_of_iType t) t_list in
 					let vars_unparsed = String.concat "; " list in
 					let types_unparsed = String.concat "; " all_types in
 						"Read ( [" ^ vars_unparsed ^ "], [" ^ types_unparsed ^ "], " ^ (string_of_iType t) ^ " ) "
 
 		| ReadLn (list, t_list, t) ->
-					let all_types = List.fold_left (fun prev_unparse t ->
-								prev_unparse @ [string_of_iType t]
-																					) [] t_list in
+					let all_types = List.map (fun t -> string_of_iType t) t_list in
 					let vars_unparsed = String.concat "; " list in
 					let types_unparsed = String.concat "; " all_types in
 						"ReadLn ( [" ^ vars_unparsed ^ "], [" ^ types_unparsed ^ "], " ^ (string_of_iType t) ^ " ) "
 		
 		| CallProc (e, e_list, t) ->
-					let all_expr = List.fold_left (fun prev_unparse e ->
-								let e_unparsed = unparse_expr e in
-									prev_unparse @ [e_unparsed]
-																				) [] e_list in
+					let all_expr = List.map (fun e -> unparse_expr e) e_list in
 					let closure_unparsed = unparse_expr e in
 					let expr_unparsed = String.concat "; " all_expr in
 						"CallProc ( " ^ closure_unparsed ^ ", [" ^ expr_unparsed ^ "], " ^ (string_of_iType t) ^ " ) "
@@ -283,18 +267,17 @@ let rec unparse_statement s =
 let rec unparse_oper op =
 	match op with
 		| Function (name, args_list, decl_block, statement, t) ->
-					let all_args = List.fold_left (fun prev_unparse (s, t1) -> 
-								prev_unparse @ ["( " ^ s ^ ", " ^ (string_of_iType t) ^ " )"]
-																				) [] args_list in
+					let all_args = 
+								List.map (fun (s, t1) -> "( " ^ s ^ ", " ^ (string_of_iType t) ^ " )"
+													) args_list in
 					let args_unparsed = String.concat "; " all_args in
 					let decl_unparsed = unparse_all_decls decl_block in
 					let statement_unparsed = unparse_statement statement in
 						"Function ( " ^ name ^ ", [" ^ args_unparsed ^ "], [" ^ decl_unparsed ^ "], " ^ statement_unparsed ^ ", " ^ (string_of_iType t) ^ " ) "
 
 		| Procedure (name, args_list, decl_block, statement, t) ->
-					let all_args = List.fold_left (fun prev_unparse (s, t1) -> 
-								prev_unparse @ ["( " ^ s ^ ", " ^ (string_of_iType t) ^ " )"]
-																				) [] args_list in
+					let all_args = List.map (fun (s, t1) -> "( " ^ s ^ ", " ^ (string_of_iType t) ^ " )"
+																	) args_list in
 					let args_unparsed = String.concat "; " all_args in
 					let decl_unparsed = unparse_all_decls decl_block in
 					let statement_unparsed = unparse_statement statement in
@@ -307,38 +290,43 @@ let rec unparse_oper op =
 
 and unparse_decl d =
 	match d with
-		| Consts (list, t) -> 
-					let all_consts = List.fold_left (fun prev_unparse (s, e) ->
-								let e_unparsed = unparse_expr e in
-									prev_unparse @ ["( "^ s ^ ", " ^ e_unparsed ^" )"]
-																								) [] list in
-					let consts_unparsed = String.concat "; " all_consts in
-						"Consts ( " ^ consts_unparsed ^ ", " ^ (string_of_iType t) ^ " ) "
+		| Types list -> 
+					let all_types = List.map (fun (name, t) ->
+								let t_unparsed = string_of_iType t in
+									"( " ^ name ^ ", " ^ t_unparsed ^ " )"
+																		) list in
+					let types_unparsed = String.concat "; " all_types in
+						"Types ( [" ^ types_unparsed ^ "] ) "
 
-		| Vars (list) -> 
-					let all_vars = List.fold_left (fun prev_unparse (t1, list1) ->
+		| Consts (list, t) -> 
+					let all_consts = List.map (fun (s, e) ->
+								let e_unparsed = unparse_expr e in
+									"( "^ s ^ ", " ^ e_unparsed ^" )"
+																		) list in
+					let consts_unparsed = String.concat "; " all_consts in
+						"Consts ( [" ^ consts_unparsed ^ "], " ^ (string_of_iType t) ^ " ) "
+
+		| Vars list -> 
+					let all_vars = List.map (fun (t1, list1) ->
 								let list_unparsed = String.concat "; " list1 in
-								let temp_vars_unparsed = "( " ^ (string_of_iType t1) ^ ", [" ^ list_unparsed ^ "] ) " in
-									prev_unparse @ [temp_vars_unparsed]
-																				) [] list in
+									"( " ^ (string_of_iType t1) ^ ", [" ^ list_unparsed ^ "] ) "
+																	) list in
 					let vars_unparsed = String.concat "; " all_vars in
-						"Vars ( " ^ vars_unparsed ^ " ) "
+						"Vars ( [" ^ vars_unparsed ^ "] ) "
 
 		| Operations (list, t) -> 
-					let all_opers = List.fold_left (fun prev_unparse op ->
-								let oper_unparsed = unparse_oper op in
-									prev_unparse @ [oper_unparsed]
-																					) [] list in
+					let all_opers = List.map (fun op -> unparse_oper op) list in
 					let opers_unparsed = String.concat "; " all_opers in
-						"Operations ( " ^ opers_unparsed ^ ", " ^ (string_of_iType t) ^ " ) "
+						"Operations ( [" ^ opers_unparsed ^ "], " ^ (string_of_iType t) ^ " ) "
 
 and unparse_all_decls decl_block = 
 	match decl_block with
-		| [consts; vars; opers] ->
+		| [types; consts; vars; opers] ->
+					let types_unparsed = unparse_decl types in
 					let consts_unparsed = unparse_decl consts in
           let vars_unparsed	= unparse_decl vars in
           let opers_unparsed = unparse_decl opers in
-          	String.concat "; " (consts_unparsed :: vars_unparsed :: opers_unparsed :: [])
+          	String.concat "; " (types_unparsed :: consts_unparsed :: vars_unparsed :: opers_unparsed :: [])
 
 		| _ -> "Internal error"
 

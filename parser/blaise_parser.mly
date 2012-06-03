@@ -15,6 +15,8 @@ open Blaise_iType
 %token PLUS MINUS MULT DIV GT GTEQ LT LTEQ AND OR EQUAL MOD NEQ
 %token ASSIGN
 
+%token TYPE
+
 %token CLASS TOBJECT TCLASS NEW
 
 %token INTEGER STRING ARRAY REC FUN PROC BOOL
@@ -42,8 +44,16 @@ main:
 ;*/
 
 decl_block:
-  const_block var_block decl_list { [$1;$2;Operations($3, TUndefined)] }
+  type_block const_block var_block decl_list { [$1;$2;$3;Operations($4, TUndefined)] }
 ;
+
+type_block:
+	TYPE type_alias_list { Types($2) }
+| { Types([]) }
+
+type_alias_list:
+	ID EQUAL type_decl SEMICOLON { [($1, $3)] }
+| ID EQUAL type_decl SEMICOLON type_alias_list { ($1, $3)::$5 }
 
 var_block:
   VAR decl_id_list { Vars($2)}
@@ -52,7 +62,7 @@ var_block:
 
 const_block:
   CONST decl_cid_list { Consts($2, TUndefined) }
-| { Consts([], TUndefined) }
+| { Consts([], TUnit) }
 ;
 
 decl_id_list:

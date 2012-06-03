@@ -180,11 +180,10 @@ let rec compile_default_type t =
 		| TString ->  (ldstr "") @ new_cell
 		| TRecord list ->  
 					let comp_set_record = 
-							List.fold_left (fun prev_comp (s, t) ->
+							List.flatten (List.map (fun (s, t) ->
 								let comp_t = compile_default_type t in
-								let temp_comp = dup @ (ldstr s) @ comp_t @ record_set in
-									prev_comp @ temp_comp 
-														) [] list in
+									dup @ (ldstr s) @ comp_t @ record_set 
+														) list) in
 						new_record @ comp_set_record
 
 		| TArray (length , t) -> 
@@ -201,18 +200,17 @@ let rec compile_default_type t =
 						
 		| _ -> [] (* dummy *);;
 
-let rec compile_assign t1 =
-	(* print_string ((string_of_iType t1)^"\n"); *)
-	match t1 with
-		| TRecord _ ->
+let rec compile_assign t1 t2 =
+	match t1, t2 with
+		| TRecord _, _ ->
 					swap @ record_copy_to
-		| TArray _ ->
+		| TArray _, _ ->
 					swap @ array_copy_to
-		| TFun _ ->
+		| TFun _, _ ->
 					swap @ closure_copy_to
-		| TProc _ ->
+		| TProc _, _ ->
 					swap @ closure_copy_to
-		| TObject _ ->
+		| TObject _, _ ->
 					swap @ record_copy_to
 		| _ -> 
 					cell_set
@@ -237,30 +235,24 @@ let rec compile_copy_iType t =
 let get_oper_info oper = 
 	match oper with
 		| Function(name, list, _, _, t) -> 
-					let args_types_list = List.fold_left (fun prev_list (_, t) ->
-																											prev_list @ [t]
-																								) [] list in
+					let args_types_list = 
+								List.map (fun (_, t) ->	t	) list in
 						(name, TFun(args_types_list, t))
 
 		| Procedure(name, list, _, _, t) -> 
-					let args_types_list = List.fold_left (fun prev_list (_, t) ->
-																											prev_list @ [t]
-																								) [] list in
+					let args_types_list = 
+								List.map (fun (_, t) -> t ) list in
 						(name, TProc(args_types_list));;
 
 
 let get_methods opers = 
-	List.fold_left (fun prev_list oper ->
-				let oper_info = get_oper_info oper in
-					prev_list @ [oper_info]
-									) [] opers;;
+	List.map (fun oper -> get_oper_info oper) opers;;
 
 let get_self_record self_type =
 	match self_type with
 		| TRecord list -> 
-					let new_list = List.fold_left (fun prev_list (s, t) ->
-								prev_list @ [(s, Id(s, t))]
-																				) [] list in
+					let new_list = 
+								List.map (fun (s, t) -> (s, Id(s, t))) list in
 						Record(new_list, self_type)
 		| _ -> Record([], self_type);; (* dummy *)
 
@@ -354,11 +346,11 @@ let rec compile_expr env to_result e =
 
 		| Record (list, _) -> 
 					let comp_set_record = 
-							List.fold_left (fun prev_comp (s, e) ->
-								let comp_e = compile_expr' e in
-								let temp_comp = dup @ (ldstr s) @ comp_e @ record_set in
-									prev_comp @ temp_comp 
-														) [] list in
+							List.flatten (
+								List.map (fun (s, e) ->
+              								let comp_e = compile_expr' e in
+              								dup @ (ldstr s) @ comp_e @ record_set
+              					) list) in
 						new_record @ comp_set_record
 
 		| New (e, t) ->
@@ -518,8 +510,9 @@ and compile_stat env s =
 		| Assign (l, r, _) ->
 					let comp_l = compile_expr env false l in
 					let comp_r = compile_expr' r in
+					let r_type = unref_iType (get_type r) in
 					let l_type = unref_iType (get_type l) in
-					let comp_assign = compile_assign l_type in
+					let comp_assign = compile_assign l_type r_type in
 						comp_l @ comp_r @ comp_assign
 
 		| Seq(l, r, _) ->
@@ -558,24 +551,24 @@ and compile_stat env s =
 							(nop label2)
 		
 		| Write (list, _) -> 
-					List.fold_left (fun prev_comp e -> 
+					List.flatten (
+						List.map (fun e -> 
 							let t = unref_iType (get_type e) in
 							let comp_e = compile_expr' e in
-							let comp_print = comp_e @ (write_type t) in
-								prev_comp @ comp_print
-													) [] list
+							comp_e @ (write_type t)
+											) list)
 		
 		| WriteLn (list, t) -> 
 					let comp_write = compile_stat' (Write (list, t)) in
 						comp_write @ (print_ln "")
 
 		| Read (list, tl, _) ->
-					List.fold_left2 (fun prev_comp s t -> 
+					List.flatten (
+						List.map2 (fun s t -> 
 							let s_t = unref_iType t in
 							let comp_get = compile_expr env false (Id(s, t)) in
-							let comp_read = comp_get @ (read_type s_t) @ cell_set in
-								prev_comp @ comp_read
-													) [] list tl
+							comp_get @ (read_type s_t) @ cell_set
+											) list tl)
 
 		| ReadLn (list, tl, t) -> 
 					let comp_read = compile_stat' (Read (list, tl, t)) in
@@ -612,7 +605,7 @@ and compile_stat env s =
 
 let rec compile_oper env o =
 	match o with
-		| Function (name, args_list, [consts; vars; opers], s, t) -> 
+		| Function (name, args_list, [types; consts; vars; opers], s, t) -> 
 					let id = fresh_identifier () in
 					let comp_closure = ldloc_stackframe @ (ldftn_fun id) @ new_closure in
 					inc_locals ();
@@ -636,7 +629,7 @@ let rec compile_oper env o =
 					let comp_set_closure = ldloc_stackframe @ (ldc recursive_addr) @ comp_closure @ stack_set in
 						(comp_set_closure, comp_fun @ decl_list, new_env)
 
-		| Procedure (name, args_list, [consts; vars; opers], s, _) -> 
+		| Procedure (name, args_list, [types; consts; vars; opers], s, _) -> 
 					let id = fresh_identifier () in
 					let comp_closure = ldloc_stackframe @ (ldftn_proc id) @ new_closure in
 					inc_locals ();
@@ -654,7 +647,7 @@ let rec compile_oper env o =
 					let comp_set_closure = ldloc_stackframe @ (ldc recursive_addr) @ comp_closure @ stack_set in
 						(comp_set_closure, comp_proc @ decl_list, new_env)
 		
-		| Class (name, [consts; Vars vars; Operations(opers, t1)], statement, t) ->
+		| Class (name, [types; consts; Vars vars; Operations(opers, t1)], statement, t) ->
       		let method_list = get_methods opers in
       		let self_type = TRecord(method_list) in
       		let self_record = get_self_record self_type in
@@ -673,7 +666,7 @@ let rec compile_oper env o =
       								TUnit), 
       						TUnit), 
       				TUnit) in
-      		let new_function = Function(name, [], [consts; Vars new_vars; Operations(opers, t1)], new_statement, self_type) in
+      		let new_function = Function(name, [], [types; consts; Vars new_vars; Operations(opers, t1)], new_statement, self_type) in
 					(* print_string ((unparse_oper new_function)^"\n"); *)
       			compile_oper env new_function
 
@@ -726,7 +719,7 @@ let rec optimize comp opt =
 
 let compile_program p =
 	match p with
-		| Program (name, [consts; vars; opers], s, _) ->
+		| Program (name, [types; consts; vars; opers], s, _) ->
 					let env = begin_scope [] in
 					begin_locals ();
 					let decl_comp, decl_list, decl_env = compile_all_decls consts vars opers env in

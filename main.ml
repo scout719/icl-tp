@@ -13,11 +13,16 @@ let rec prompt lexbuf =
 			let p = typechk_program s in
 				if not_none (get_type_program p) then (
 					List.iter (fun s -> print_string (s ^ "\n")) (compile_program p)
+					(* print_string (unparse_program p); *)
     			(* print_string "Terminal:\n"; evalProgram p *)
 				) else (
 					print_string "Invalid Program:\n";
 					print_string (unparse_program p)
 				)
+			
+			(* print_string (unparse_program s) *)
+
+			(* print_string (unparse_program (typechk_program s)) *)
 			
 			(* print_string "Terminal:\n"; evalProgram s; print_string "\n"; *)
 			

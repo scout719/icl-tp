@@ -56,6 +56,7 @@ rule token = parse
 	| "Integer" { INTEGER }
 	| "Bool" { BOOL }
 	| "String" { STRING }
+	| "type" { TYPE }
 	| "Array" { ARRAY }
 	| "Record" { REC }
 	| "Fun" { FUN }
