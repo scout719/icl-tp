@@ -58,7 +58,7 @@ let swap = ["stloc tmp";
 						"ldloc tmp2"];;
 let dup = ["dup"];;
 let nop label = [label^": nop"];;
-let string_concat = ["callvirt instance string [mscorlib]System.String::Concat(string, string)"];;
+let string_concat = ["call string class[mscorlib]System.String::Concat(string, string)"];;
 let obj_equals = "callvirt instance bool [mscorlib]System.Object::Equals(object)" :: box_bool;;
 
 (** ******************************************** FUN/PRC OPERS ************************************************ *)

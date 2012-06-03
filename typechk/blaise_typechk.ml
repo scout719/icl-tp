@@ -463,7 +463,7 @@ and typechk_oper env o =
 		
 		| Class (name, [consts; vars; opers], statement, _) -> 
 					let method_list = get_methods opers in
-					let class_type = TClass("", method_list) in
+					let class_type = TClass(name, method_list) in
         	let self_type = TObject("", method_list) in
 					let new_env1 = assoc name class_type env in
 					let new_env = assoc "self" self_type new_env1 in
