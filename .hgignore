@@ -6,7 +6,6 @@ syntax: glob
 _build/*
 *.native
 *.byte
-*.zip
 test
 *.il
 *.exe
