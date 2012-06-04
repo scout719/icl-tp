@@ -47,19 +47,19 @@ let rec check_assign env l r =
 																) TUnit list1 list2
 
 					| TFun (list1, t1), TFun (list2, t2) ->
-								if equals [] [] !lr r then
+								if equals env [] !lr r then
 									TUnit
 								else
 									TNone "Functions with diferent parameters"
 
 					| TProc list1, TProc list2 ->
-								if equals [] [] !lr r then
+								if equals env [] !lr r then
 									TUnit
 								else
 									TNone "Procedures with diferent parameters"
 
 					| tl, tr -> 
-								if equals [] [] tl (unref_iType tr) then
+								if equals env [] tl (unref_iType tr) then
 									TUnit
 								else
 									TNone "Types not matching"
@@ -67,7 +67,7 @@ let rec check_assign env l r =
 		| _ -> TNone "TRef expected on left of assign";;
 
 let rec check_matching_types env t1 t2 =
-	equals [] [] t1 t2
+	equals env [] t1 t2
 				
 let get_oper_info env oper = 
 	match oper with
@@ -108,7 +108,7 @@ let get_object_type t =
 
 let rec typechk_exp env e =
 	let typechk_exp' = typechk_exp env in
-	let equals' = equals [] [] in
+	let equals' = equals env [] in
 	match e with
 		| Number n -> Number n
 		
@@ -289,7 +289,7 @@ let rec typechk_exp env e =
 					let e' = typechk_exp' e in
 					let t = unref_iType (get_type e') in
 					let record_type = get_type_of_record env s t in
-						if un_oper_record s t then
+						if un_oper_record env s t then
 							GetRecord(e', s, record_type)
 						else
 							GetRecord(e', s, TNone "Invalid types in GetRecord")
@@ -315,7 +315,7 @@ let rec typechk_exp env e =
 let rec typechk_stat env s =
 	let typechk_exp' = typechk_exp env in
 	let typechk_stat' = typechk_stat env in
-	let equals' = equals [] [] in
+	let equals' = equals env [] in
 		match s with
 			| Assign (l, r, _) ->
 						let l', r' = typechk_exp' l, typechk_exp' r in
@@ -404,18 +404,17 @@ let rec typechk_stat env s =
   						)
 						
 and typechk_all_decls env types consts vars opers =
-			let all_consts ,consts', env_consts = typechk_decl env consts in
+			let all_types, _, env_types = typechk_decl env types in
+			let all_consts, consts', env_consts = typechk_decl env_types consts in
 			let all_vars, vars', env_vars = typechk_decl env_consts vars in
 			let all_opers, opers', env_opers = typechk_decl env_vars opers in
 				check_duplicates (all_consts @ all_vars @ all_opers);
-				(* let types_type = get_type_decl types' in *)
 				let consts_type = get_type_decl consts' in
 				let vars_type = get_type_decl vars' in
 				let opers_type = get_type_decl opers' in
-					if (*(equals [] [] types_type TUnit) &&*)
-							(equals [] [] consts_type TUnit) &&
-							(equals [] [] vars_type TUnit) &&
-							(equals [] [] opers_type TUnit) then
+					if	(equals env [] consts_type TUnit) &&
+							(equals env [] vars_type TUnit) &&
+							(equals env [] opers_type TUnit) then
 						([types; consts'; vars'; opers'], env_opers, TUnit)
 					else
 						([types; consts'; vars'; opers'], env_opers, TNone "Decls not well typed")

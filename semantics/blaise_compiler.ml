@@ -142,120 +142,6 @@ let preamble_fun num_fun num_locals = [".method public static hidebysig default 
 let footer = [	"ret";
 							"}"];;
 
-(** ******************************************** COMPILE OPERS ************************************************ *)
-
-let compile_bin_oper_obj l r oper =
-	l @ r @ oper;;
-
-let compile_bin_oper_int l r oper =
-	l @ unbox_int32 @ r @ unbox_int32 @ oper;;
-
-let compile_bin_oper_bool l r oper =
-	l @ unbox_bool @ r @ unbox_bool @ oper;;
-
-let compile_un_oper_int e oper =
-	e @ unbox_int32 @ oper;;
-
-let compile_un_oper_bool e oper =
-	e @ unbox_bool @ oper;;
-
-let write_type t =
-	match t with
-		| TNumber -> unbox_int32 @ (print int32)
-		| TBoolean -> unbox_bool @ (print bool)
-		| TString -> print string
-		| _ -> [] (* dummy *);;
-
-let read_type t =
-	match t with
-		| TNumber -> ld_reader @ read_int @ box_int32
-		| TBoolean -> ld_reader @ read_bool @ box_bool
-		| TString -> ld_reader @ read_string
-		| _ -> [] (* dummy *);;
-
-let rec compile_default_type t =
-	match t with
-		| TNumber -> (ldc_int32 0) @ new_cell
-		| TBoolean -> (ldc_bool false) @ new_cell
-		| TString ->  (ldstr "") @ new_cell
-		| TRecord list ->  
-					let comp_set_record = 
-							List.flatten (List.map (fun (s, t) ->
-								let comp_t = compile_default_type t in
-									dup @ (ldstr s) @ comp_t @ record_set 
-														) list) in
-						new_record @ comp_set_record
-
-		| TArray (length , t) -> 
-					let comp_t = compile_default_type t in
-						(ldc length) @ comp_t @ new_array
-
-  	| TFun (list, _) -> ["ldnull"] @ (ldc 0) @ new_closure
-
-  	| TProc list -> ["ldnull"] @ (ldc 0) @ new_closure
-		
-		| TObject (name, list) -> compile_default_type (TRecord list)
-
-		| TClass_id _ -> new_record
-						
-		| _ -> [] (* dummy *);;
-
-let rec compile_assign t1 t2 =
-	match t1, t2 with
-		| TRecord _, _ ->
-					swap @ record_copy_to
-		| TArray _, _ ->
-					swap @ array_copy_to
-		| TFun _, _ ->
-					swap @ closure_copy_to
-		| TProc _, _ ->
-					swap @ closure_copy_to
-		| TObject _, _ ->
-					swap @ record_copy_to
-		| _ -> 
-					cell_set
-
-let rec in_cell t = 
-	match t with
-		| TRef r -> in_cell !r
-		| TNumber -> true
-		| TString -> true
-		| TBoolean -> true
-		| _ -> false;;
-
-let rec compile_copy_iType t =
-	match t with
-		| TRef r -> ( match !r with
-										| TRecord _ -> record_const_copy
-										| TArray _ -> array_const_copy
-										| _ -> [] (* dummy *)
-								)
-		| _ -> [];;
-				
-let get_oper_info oper = 
-	match oper with
-		| Function(name, list, _, _, t) -> 
-					let args_types_list = 
-								List.map (fun (_, t) ->	t	) list in
-						(name, TFun(args_types_list, t))
-
-		| Procedure(name, list, _, _, t) -> 
-					let args_types_list = 
-								List.map (fun (_, t) -> t ) list in
-						(name, TProc(args_types_list));;
-
-
-let get_methods opers = 
-	List.map (fun oper -> get_oper_info oper) opers;;
-
-let get_self_record self_type =
-	match self_type with
-		| TRecord list -> 
-					let new_list = 
-								List.map (fun (s, t) -> (s, Id(s, t))) list in
-						Record(new_list, self_type)
-		| _ -> Record([], self_type);; (* dummy *)
-
 (** ******************************************** AUX FUNCTIONS ************************************************ *)
 
 let identifier = ref 0;;
@@ -322,11 +208,152 @@ let rec get_jumps_list n list =
 	else
 		get_jumps_list (n - 1) (list @ (ldc 0) @ (stack_get));;
 
+let types_env = ref TypeEnvMap.empty(*[]*);;
+
+(* let begin_scope_t () =                          *)
+(* 	types_env := TypeEnvMap.empty :: !types_env;; *)
+
+(* let end_scope_t () =      *)
+(* 	types_env :=            *)
+(* 		match !types_env with *)
+(* 		| [] -> []            *)
+(* 		| x::xs ->            *)
+(* 					xs;;            *)
+
+(* let get_curr_env_t () =      *)
+(* 	match !types_env with      *)
+(* 		| [] -> TypeEnvMap.empty *)
+(* 		| x::xs -> x;;           *)
+
+let assoc_t s t =
+	types_env := TypeEnvMap.add s t !types_env;;
+		(* match !types_env with              *)
+		(* | [] -> []                         *)
+		(* | x::xs ->                         *)
+		(* 			(TypeEnvMap.add s t x)::xs;; *)
+
+(** ******************************************** COMPILE OPERS ************************************************ *)
+
+let compile_bin_oper_obj l r oper =
+	l @ r @ oper;;
+
+let compile_bin_oper_int l r oper =
+	l @ unbox_int32 @ r @ unbox_int32 @ oper;;
+
+let compile_bin_oper_bool l r oper =
+	l @ unbox_bool @ r @ unbox_bool @ oper;;
+
+let compile_un_oper_int e oper =
+	e @ unbox_int32 @ oper;;
+
+let compile_un_oper_bool e oper =
+	e @ unbox_bool @ oper;;
+
+let write_type t =
+	match t with
+		| TNumber -> unbox_int32 @ (print int32)
+		| TBoolean -> unbox_bool @ (print bool)
+		| TString -> print string
+		| _ -> [] (* dummy *);;
+
+let read_type t =
+	match t with
+		| TNumber -> ld_reader @ read_int @ box_int32
+		| TBoolean -> ld_reader @ read_bool @ box_bool
+		| TString -> ld_reader @ read_string
+		| _ -> [] (* dummy *);;
+
+let rec compile_default_type t =
+	match t with
+		| TNumber -> (ldc_int32 0) @ new_cell
+		| TBoolean -> (ldc_bool false) @ new_cell
+		| TString ->  (ldstr "") @ new_cell
+		| TRecord list ->  
+					let comp_set_record = 
+							List.flatten (List.map (fun (s, t) ->
+								let comp_t = compile_default_type t in
+									dup @ (ldstr s) @ comp_t @ record_set 
+														) list) in
+						new_record @ comp_set_record
+
+		| TArray (length , t) -> 
+					let comp_t = compile_default_type t in
+						(ldc length) @ comp_t @ new_array
+
+  	| TFun (list, _) -> ["ldnull"] @ (ldc 0) @ new_closure
+
+  	| TProc list -> ["ldnull"] @ (ldc 0) @ new_closure
+		
+		| TObject (name, list) -> compile_default_type (TRecord list)
+
+		| TClass_id name -> 
+					(* let env_t = get_curr_env_t () in *)
+					let t = TypeEnvMap.find name !types_env in
+						compile_default_type (unfold_type !types_env t)
+						
+		| _ -> [] (* dummy *);;
+
+let rec compile_assign t1 t2 =
+	match t1, t2 with
+		| TRecord _, _ ->
+					swap @ record_copy_to
+		| TArray _, _ ->
+					swap @ array_copy_to
+		| TFun _, _ ->
+					swap @ closure_copy_to
+		| TProc _, _ ->
+					swap @ closure_copy_to
+		| TObject _, _ ->
+					swap @ record_copy_to
+		| _ -> 
+					cell_set
+
+let rec in_cell t = 
+	match t with
+		| TRef r -> in_cell !r
+		| TNumber -> true
+		| TString -> true
+		| TBoolean -> true
+		| _ -> false;;
+
+let rec compile_copy_iType t =
+	match t with
+		| TRef r -> ( match !r with
+										| TRecord _ -> record_const_copy
+										| TArray _ -> array_const_copy
+										| _ -> [] (* dummy *)
+								)
+		| _ -> [];;
+				
+let get_oper_info oper = 
+	match oper with
+		| Function(name, list, _, _, t) -> 
+					let args_types_list = 
+								List.map (fun (_, t) ->	t	) list in
+						(name, TFun(args_types_list, t))
+
+		| Procedure(name, list, _, _, t) -> 
+					let args_types_list = 
+								List.map (fun (_, t) -> t ) list in
+						(name, TProc(args_types_list));;
+
+
+let get_methods opers = 
+	List.map (fun oper -> get_oper_info oper) opers;;
+
+let get_self_record self_type =
+	match self_type with
+		| TRecord list -> 
+					let new_list = 
+								List.map (fun (s, t) -> (s, Id(s, t))) list in
+						Record(new_list, self_type)
+		| _ -> Record([], self_type);; (* dummy *)
+
 (** ******************************************** EXPR COMPILER ************************************************ *)
 
 let rec compile_expr env to_result e =
 	let compile_expr' = compile_expr env true in
-	let equals' = equals [] [] in
+	let equals' = equals !types_env [] in
 	match e with
 		| Number n -> ldc_int32 n
 
@@ -622,7 +649,7 @@ let rec compile_oper env o =
 					let comp_result = (ldloc_stackframe) @ (ldc result_addr) @ (compile_default_type t) @ stack_set in
 					let deref = if in_cell t then cell_get else [] in
 					let get_result = ldloc_stackframe @ (ldc result_addr) @ stack_get @ deref in
-					let decl_comp, decl_list, decl_env = compile_all_decls consts vars opers temp_env in
+					let decl_comp, decl_list, decl_env = compile_all_decls types consts vars opers temp_env in
 					let comp_s = compile_stat decl_env s in
 					let num_locals = end_locals () in
 					let comp_fun = (preamble_fun id num_locals) @ comp_result @ decl_comp @ comp_s @ get_result @ footer in
@@ -640,7 +667,7 @@ let rec compile_oper env o =
 					let args_env = 
 							List.fold_left 	(fun prev_env (s, _) -> assoc s prev_env
 															) proc_env args_list in
-					let decl_comp, decl_list, decl_env = compile_all_decls consts vars opers args_env in
+					let decl_comp, decl_list, decl_env = compile_all_decls types consts vars opers args_env in
 					let comp_s = compile_stat decl_env s in
 					let num_locals = end_locals () in
 					let comp_proc = (preamble_proc id num_locals) @ decl_comp @ comp_s @ footer in
@@ -704,7 +731,9 @@ and compile_decl env d =
 								 (prev_comp @ oper_comp, prev_list @ oper_list, oper_env)
 													) ([], [], env) list
 
-and compile_all_decls consts vars opers env =
+and compile_all_decls types consts vars opers env =
+	let list = match types with Types l -> l | _ -> [] in
+	List.iter (fun (s, t) -> assoc_t s t ) list;
 	let (consts_comp, _, consts_env) = compile_decl env consts in
 	let (vars_comp, _, vars_env) = compile_decl consts_env vars in
 	let (opers_comp, opers_list, opers_env) = compile_decl vars_env opers in
@@ -722,7 +751,7 @@ let compile_program p =
 		| Program (name, [types; consts; vars; opers], s, _) ->
 					let env = begin_scope [] in
 					begin_locals ();
-					let decl_comp, decl_list, decl_env = compile_all_decls consts vars opers env in
+					let decl_comp, decl_list, decl_env = compile_all_decls types consts vars opers env in
 					let comp_s = compile_stat decl_env s in
 					let all_comp = decl_comp @ comp_s in
 					let optimized_s = optimize all_comp [] in

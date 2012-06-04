@@ -258,7 +258,7 @@ let rec evalExp env lvalue e =
           														assoc s param prev_env
           										) !closure_env listArgs list in
 						let temp_env = evalAllDecls types consts vars opers args_env in
-						print_string ((string_of_iType t)^"\n");
+						(* print_string ((string_of_iType t)^"\n"); *)
 						(* preparar env para ter uma var *)
 						(* result para guardar o resultado da funcao *)
 						let new_env = assoc "result" (RefValue(ref (defaultValue t))) temp_env in 

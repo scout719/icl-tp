@@ -30,55 +30,55 @@ let rec unfold_type env t =
 	match t with
 		| TClass_id s ->
 					( try
-        		unfold_type env (MyMap.find s env)
+        		(*unfold_type env*) (MyMap.find s env)
         	with Not_found -> TNone "Type not found"
 					)
 
-		(* | _ -> t;; *)
-		| TNumber -> t
-  	| TString -> t
-  	| TBoolean -> t
+		| _ -> t;;
+(* 		| TNumber -> t                                                 *)
+(*   	| TString -> t                                                 *)
+(*   	| TBoolean -> t                                                *)
 
-  	| TFun (list, t) -> 
-					let params_list = List.map (fun t ->
-																					unfold_type env t
-  																		) list in
-						TFun(params_list, unfold_type env t)
-		
-  	| TProc list -> 
-					let params_list = List.map (fun t ->
-																					unfold_type env t
-																			) list in
-						TProc(params_list)
-		
-  	| TArray (size, t) -> 
-					TArray( size, unfold_type env t)
-  	
-		| TRecord list -> 
-					let fields_list = List.map ( fun 	(s, t) ->
-																						(s,unfold_type env t)
-																		) list in
-						TRecord(fields_list)
-  	
-		| TRef r -> TRef(ref (unfold_type env t))
-		
-		| TObject (name, list) ->
-					let methods_list = List.map ( fun (s, t) ->
-																						(s, unfold_type env t)
-																			) list in
-						TObject( name, methods_list)
-		
-		| TClass (name, list) ->
-					let methods_list = List.map ( fun (s, t) ->
-																						(s, unfold_type env t)
-																			) list in
-						TClass( name, methods_list)
-  	
-		| TUnit -> TUnit
-  	
-		| TNone error -> TNone ( error )
-  	
-		| TUndefined -> TUndefined;;
+(*   	| TFun (list, t) ->                                            *)
+(* 					let params_list = List.map (fun t ->                     *)
+(* 																					unfold_type env t        *)
+(*   																		) list in                    *)
+(* 						TFun(params_list, unfold_type env t)                   *)
+(* 		                                                               *)
+(*   	| TProc list ->                                                *)
+(* 					let params_list = List.map (fun t ->                     *)
+(* 																					unfold_type env t        *)
+(* 																			) list in                    *)
+(* 						TProc(params_list)                                     *)
+(* 		                                                               *)
+(*   	| TArray (size, t) ->                                          *)
+(* 					TArray( size, unfold_type env t)                         *)
+(*   	                                                               *)
+(* 		| TRecord list ->                                              *)
+(* 					let fields_list = List.map ( fun 	(s, t) ->             *)
+(* 																						(s,unfold_type env t)  *)
+(* 																		) list in                      *)
+(* 						TRecord(fields_list)                                   *)
+(*   	                                                               *)
+(* 		| TRef r -> TRef(ref (unfold_type env t))                      *)
+(* 		                                                               *)
+(* 		| TObject (name, list) ->                                      *)
+(* 					let methods_list = List.map ( fun (s, t) ->              *)
+(* 																						(s, unfold_type env t) *)
+(* 																			) list in                    *)
+(* 						TObject( name, methods_list)                           *)
+(* 		                                                               *)
+(* 		| TClass (name, list) ->                                       *)
+(* 					let methods_list = List.map ( fun (s, t) ->              *)
+(* 																						(s, unfold_type env t) *)
+(* 																			) list in                    *)
+(* 						TClass( name, methods_list)                            *)
+(*   	                                                               *)
+(* 		| TUnit -> TUnit                                               *)
+(*   	                                                               *)
+(* 		| TNone error -> TNone ( error )                               *)
+(*   	                                                               *)
+(* 		| TUndefined -> TUndefined;;                                   *)
 
 let rec string_of_iType t =
 	match t with
@@ -144,12 +144,12 @@ let rec contains t1 t2 compare_list =
 
 
 let rec equals env compare_list t1 t2 =
-  (* if contains t1 t2 compare_list then                *)
-  (* 	true                                             *)
-  (* else                                               *)
-  (* 	let new_compare_list = (t1, t2)::compare_list in *)
-  (* 	let equals' = equals env new_compare_list in     *)
-  	let equals' = equals env compare_list in
+  if contains t1 t2 compare_list then
+  	true
+  else
+  	let new_compare_list = (t1, t2)::compare_list in
+  	let equals' = equals env new_compare_list in
+  	(* let equals' = equals env compare_list in *)
   	
   	(* print_string ("left: "^(string_of_iType t1)^"\nright: "^(string_of_iType t2)^"\n\n"); *)
   	match t1, t2 with
@@ -175,27 +175,29 @@ let rec equals env compare_list t1 t2 =
   													) true list1 list2
   
   		| TClass_id name1, _ -> 
-            let list1 = List.assoc name1 env in
-            let new_t1 = TObject("", list1) in
+            (* let list1 = List.assoc name1 env in *)
+            (* let new_t1 = TObject("", list1) in  *)
+						let new_t1 = MyMap.find name1 env in
               equals' new_t1 t2
   
   		| _, TClass_id name2 -> 
-            let list2 = List.assoc name2 env in
-            let new_t2 = TObject("", list2) in
+            (* let list2 = List.assoc name2 env in *)
+            (* let new_t2 = TObject("", list2) in  *)
+						let new_t2 = MyMap.find name2 env in
               equals' t1 new_t2
   
   		| TNone _, TNone _ -> 
   					true
   
   		| TObject (name1, list1) , TObject (name2, list2) ->
-            if contains t1 t2 compare_list then
-              true
-            else
-              let new_compare_list = (t1, t2)::compare_list in
-              let new_env1 = if name1 <> "" then (name1, list1)::env else env in
-              let new_env2 = if name2 <> "" then (name2, list2)::new_env1 else new_env1 in
+            (* if contains t1 t2 compare_list then                                            *)
+            (*   true                                                                         *)
+            (* else                                                                           *)
+            (*   let new_compare_list = (t1, t2)::compare_list in                             *)
+            (*   let new_env1 = if name1 <> "" then (name1, list1)::env else env in           *)
+            (*   let new_env2 = if name2 <> "" then (name2, list2)::new_env1 else new_env1 in *)
       					List.fold_left2 (fun prev_compare (s1, t1) (s2, t2) ->
-													if prev_compare && s1 = s2 && equals new_env2 new_compare_list t1 t2 then
+													if prev_compare && s1 = s2 && equals' (*new_env2 new_compare_list*) t1 t2 then
 														true
 													else 
 														false
@@ -261,7 +263,7 @@ let get_type_of_array t =
 		| TArray(_, t) -> t
 		| _ -> TNone "Array expected";;
 
-let get_type_of_record env s t =
+let rec get_type_of_record env s t =
 	match t with
 		| TRecord list -> 
 					(try
@@ -276,6 +278,12 @@ let get_type_of_record env s t =
 							subst name t t_method
     			with
     				| Not_found -> TNone ("Method not found("^s^")"))
+		| TClass_id name ->
+					(try
+						let t = MyMap.find name env in
+							get_type_of_record env s t
+					with
+						| Not_found -> TNone ("Type not found("^name^")"))
 
 		| _ -> TNone "Record expected";;
 
@@ -315,10 +323,16 @@ let un_oper_array t =
 		| TArray _ -> true
 		| _ -> false;;
 
-let un_oper_record s t =
+let rec un_oper_record env s t =
 	match t with
 		| TRecord list -> List.mem_assoc s list
 		| TObject (name, list)-> List.mem_assoc s list
+		| TClass_id name -> 
+					(try
+						let t = MyMap.find name env in
+							un_oper_record env s t
+					with
+						| Not_found -> false)
 		| _ -> false;;
 
 let not_none t =
