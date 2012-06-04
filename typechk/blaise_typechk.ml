@@ -31,7 +31,7 @@ let rec check_assign env l r =
 	(* print_string ("left: "^(string_of_iType l)^"\nright: "^(string_of_iType r)^"\n\n"); *)
 	match l with
 		| TRef lr -> 
-				( match !lr, r with
+				( match lr, r with
 					| TArray (length1, t1), TArray (length2, t2) -> 
 								if length1 = length2 then 
 									check_assign env t1 t2
@@ -47,13 +47,13 @@ let rec check_assign env l r =
 																) TUnit list1 list2
 
 					| TFun (list1, t1), TFun (list2, t2) ->
-								if equals env [] !lr r then
+								if equals env [] lr r then
 									TUnit
 								else
 									TNone "Functions with diferent parameters"
 
 					| TProc list1, TProc list2 ->
-								if equals env [] !lr r then
+								if equals env [] lr r then
 									TUnit
 								else
 									TNone "Procedures with diferent parameters"
@@ -79,14 +79,14 @@ let get_oper_info env oper =
 					let args_types_list = List.map (fun (_, t) -> t) list in
 						(name, TProc(args_types_list))
 
-		| _ -> ("", TNone "dummy");; (* dummy *)
+		| _ -> ("", TNone "dummy");; (* dummy (ignore class) *)
 
 let get_methods env opers =
 	match opers with
 		| Operations(opers, _) ->
 					List.map (fun oper -> get_oper_info env oper) opers
 		
-		| _ -> [];; (* dummy *)
+		| _ -> [];; (* dummy (will always be operations) *)
 
 let get_self_record self_type =
 	match self_type with
@@ -94,7 +94,7 @@ let get_self_record self_type =
 					let new_list = List.map (fun (s, t) -> (s, Id(s, t))) list in
           	Record(new_list, self_type)
 		
-		| _ -> Record([], TNone "dummy");; (* dummy *)
+		| _ -> Record([], TNone "dummy");; (* dummy (will always be TRcord)*)
 
 let rec is_class t =
 	match t with

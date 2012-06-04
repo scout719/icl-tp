@@ -399,12 +399,12 @@ and evalOpers env o =
 					statement, 
 					Seq(
 							Assign(
-									Id("self", TRef(ref self_type)), 
+									Id("self", TRef(self_type)), 
 									self_record, 
 									TUnit), 
 							Assign(
-									Id("result", TRef(ref self_type)), 
-									Id("self", TRef(ref self_type)), 
+									Id("result", TRef(self_type)), 
+									Id("self", TRef(self_type)), 
 									TUnit), 
 							TUnit), 
 					TUnit) in

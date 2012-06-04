@@ -5,7 +5,7 @@ open Blaise_iType;;
 module StackframeMap = Map.Make (String);;
 
 (** ********************************************     FALTA     ************************************************ *)
-
+(** Classes como tipo, assign entre objectos *)
 (** ********************************************   COMPILER    ************************************************ *)
 
 exception Not_found;;
@@ -208,29 +208,10 @@ let rec get_jumps_list n list =
 	else
 		get_jumps_list (n - 1) (list @ (ldc 0) @ (stack_get));;
 
-let types_env = ref TypeEnvMap.empty(*[]*);;
-
-(* let begin_scope_t () =                          *)
-(* 	types_env := TypeEnvMap.empty :: !types_env;; *)
-
-(* let end_scope_t () =      *)
-(* 	types_env :=            *)
-(* 		match !types_env with *)
-(* 		| [] -> []            *)
-(* 		| x::xs ->            *)
-(* 					xs;;            *)
-
-(* let get_curr_env_t () =      *)
-(* 	match !types_env with      *)
-(* 		| [] -> TypeEnvMap.empty *)
-(* 		| x::xs -> x;;           *)
+let types_env = ref TypeEnvMap.empty;;
 
 let assoc_t s t =
 	types_env := TypeEnvMap.add s t !types_env;;
-		(* match !types_env with              *)
-		(* | [] -> []                         *)
-		(* | x::xs ->                         *)
-		(* 			(TypeEnvMap.add s t x)::xs;; *)
 
 (** ******************************************** COMPILE OPERS ************************************************ *)
 
@@ -286,8 +267,7 @@ let rec compile_default_type t =
 		
 		| TObject (name, list) -> compile_default_type (TRecord list)
 
-		| TClass_id name -> 
-					(* let env_t = get_curr_env_t () in *)
+		| TType_id name -> 
 					let t = TypeEnvMap.find name !types_env in
 						compile_default_type (unfold_type !types_env t)
 						
@@ -310,7 +290,7 @@ let rec compile_assign t1 t2 =
 
 let rec in_cell t = 
 	match t with
-		| TRef r -> in_cell !r
+		| TRef r -> in_cell r
 		| TNumber -> true
 		| TString -> true
 		| TBoolean -> true
@@ -318,7 +298,7 @@ let rec in_cell t =
 
 let rec compile_copy_iType t =
 	match t with
-		| TRef r -> ( match !r with
+		| TRef r -> ( match r with
 										| TRecord _ -> record_const_copy
 										| TArray _ -> array_const_copy
 										| _ -> [] (* dummy *)
@@ -639,6 +619,7 @@ let rec compile_oper env o =
 					let new_env = assoc name env in
 					let _ , recursive_addr = find name new_env in
 					let fun_env = begin_scope new_env in
+					let env_t_backup = !types_env in
 					begin_locals ();
 					let args_env = 
 							List.fold_left 	(fun prev_env (s, _) -> assoc s prev_env
@@ -652,6 +633,7 @@ let rec compile_oper env o =
 					let decl_comp, decl_list, decl_env = compile_all_decls types consts vars opers temp_env in
 					let comp_s = compile_stat decl_env s in
 					let num_locals = end_locals () in
+					types_env := env_t_backup;
 					let comp_fun = (preamble_fun id num_locals) @ comp_result @ decl_comp @ comp_s @ get_result @ footer in
 					let comp_set_closure = ldloc_stackframe @ (ldc recursive_addr) @ comp_closure @ stack_set in
 						(comp_set_closure, comp_fun @ decl_list, new_env)
@@ -663,6 +645,7 @@ let rec compile_oper env o =
 					let new_env = assoc name env in
 					let _ , recursive_addr = find name new_env in
 					let proc_env = begin_scope new_env in
+					let env_t_backup = !types_env in
 					begin_locals ();
 					let args_env = 
 							List.fold_left 	(fun prev_env (s, _) -> assoc s prev_env
@@ -670,6 +653,7 @@ let rec compile_oper env o =
 					let decl_comp, decl_list, decl_env = compile_all_decls types consts vars opers args_env in
 					let comp_s = compile_stat decl_env s in
 					let num_locals = end_locals () in
+					types_env := env_t_backup;
 					let comp_proc = (preamble_proc id num_locals) @ decl_comp @ comp_s @ footer in
 					let comp_set_closure = ldloc_stackframe @ (ldc recursive_addr) @ comp_closure @ stack_set in
 						(comp_set_closure, comp_proc @ decl_list, new_env)
@@ -684,12 +668,12 @@ let rec compile_oper env o =
       				statement, 
       				Seq(
       						Assign(
-      								Id("self", TRef(ref self_type)), 
+      								Id("self", TRef(self_type)), 
       								self_record, 
       								TUnit), 
       						Assign(
-      								Id("result", TRef(ref self_type)), 
-      								Id("self", TRef(ref self_type)), 
+      								Id("result", TRef(self_type)), 
+      								Id("self", TRef(self_type)), 
       								TUnit), 
       						TUnit), 
       				TUnit) in
@@ -719,7 +703,7 @@ and compile_decl env d =
 									inc_locals ();
 									let new_env = assoc s prev_env in
 									let _, addr = find s new_env in
-									let comp_e = compile_expr env true e in
+									let comp_e = compile_expr prev_env true e in
 									let new_comp = prev_comp @ (ldloc_stackframe) @ (ldc addr) @ comp_e @ stack_set in
 										(new_comp, new_env)
 												) ([], env) list in
@@ -730,6 +714,8 @@ and compile_decl env d =
 								let oper_comp, oper_list, oper_env = compile_oper prev_env o in
 								 (prev_comp @ oper_comp, prev_list @ oper_list, oper_env)
 													) ([], [], env) list
+
+		| _ -> ([], [], env) (* dummy (types are treated on compile_all_decls) *)
 
 and compile_all_decls types consts vars opers env =
 	let list = match types with Types l -> l | _ -> [] in

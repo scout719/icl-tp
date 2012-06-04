@@ -8,17 +8,17 @@ type iType =
 	| TProc of (iType list)
 	| TArray of int * iType
 	| TRecord of (string * iType) list
-	| TRef of iType ref
+	| TRef of iType
 	| TClass of string * (string * iType) list
 	| TObject of string * (string * iType) list
-	| TClass_id of string
+	| TType_id of string
 	| TUnit
 	| TNone of string
 	| TUndefined;;
 
 let rec unref_iType t =
 	match t with
-		| TRef r -> unref_iType !r
+		| TRef t -> unref_iType t
 		| t -> t;;
 
 let is_var t =
@@ -28,7 +28,7 @@ let is_var t =
 
 let rec unfold_type env t =
 	match t with
-		| TClass_id s ->
+		| TType_id s ->
 					( try
         		(*unfold_type env*) (MyMap.find s env)
         	with Not_found -> TNone "Type not found"
@@ -107,9 +107,9 @@ let rec string_of_iType t =
 					let list_string = String.concat ", " fields_list in
 						"TRecord([ " ^ list_string ^ "] )"
   	
-		| TRef r -> "TRef("^(string_of_iType !r)^")"
+		| TRef t -> "TRef("^(string_of_iType t)^")"
 		
-		| TClass_id id -> "TClass_id ( "^id^" ) "
+		| TType_id id -> "TClass_id ( "^id^" ) "
 		
 		| TObject (name, list) ->
 					let methods_list = 
@@ -153,8 +153,8 @@ let rec equals env compare_list t1 t2 =
   	
   	(* print_string ("left: "^(string_of_iType t1)^"\nright: "^(string_of_iType t2)^"\n\n"); *)
   	match t1, t2 with
-  		| TRef r1, _ -> equals' !r1 t2
-  		| _, TRef r2 -> equals' t1 !r2
+  		| TRef r1, _ -> equals' r1 t2
+  		| _, TRef r2 -> equals' t1 r2
   		| TRecord list1, TRecord list2 ->
   					List.fold_left2 (fun prev_equals (s1, t1) (s2, t2) ->
   								prev_equals && s1 = s2 && (equals' t1 t2)
@@ -174,13 +174,13 @@ let rec equals env compare_list t1 t2 =
   															(equals' t1' t2') && prev_match
   													) true list1 list2
   
-  		| TClass_id name1, _ -> 
+  		| TType_id name1, _ -> 
             (* let list1 = List.assoc name1 env in *)
             (* let new_t1 = TObject("", list1) in  *)
 						let new_t1 = MyMap.find name1 env in
               equals' new_t1 t2
   
-  		| _, TClass_id name2 -> 
+  		| _, TType_id name2 -> 
             (* let list2 = List.assoc name2 env in *)
             (* let new_t2 = TObject("", list2) in  *)
 						let new_t2 = MyMap.find name2 env in
@@ -216,13 +216,13 @@ let rec subst name t t_method =
 						TRecord new_list
 
   	| TRef r -> 
-					TRef (ref (subst name t !r))
+					TRef (subst name t r)
 
-  	| TClass_id s -> 
+  	| TType_id s -> 
 					if s = name then
 						t
 					else
-						TClass_id s
+						TType_id s
 
 		| TFun (list, t') -> 
 					let new_list = List.map (fun t'' ->
@@ -278,7 +278,7 @@ let rec get_type_of_record env s t =
 							subst name t t_method
     			with
     				| Not_found -> TNone ("Method not found("^s^")"))
-		| TClass_id name ->
+		| TType_id name ->
 					(try
 						let t = MyMap.find name env in
 							get_type_of_record env s t
@@ -327,7 +327,7 @@ let rec un_oper_record env s t =
 	match t with
 		| TRecord list -> List.mem_assoc s list
 		| TObject (name, list)-> List.mem_assoc s list
-		| TClass_id name -> 
+		| TType_id name -> 
 					(try
 						let t = MyMap.find name env in
 							un_oper_record env s t
@@ -342,7 +342,7 @@ let not_none t =
 
 let rec is_readable t =
 	match t with
-		| TRef r -> (match !r with
+		| TRef r -> (match r with
 									| TNumber -> true
 									| TString -> true
 									| TBoolean -> true
@@ -360,18 +360,18 @@ let rec is_writable t =
 let rec get_reference_to env t =
 	match t with
 		| TArray (length, t') -> 
-					TRef (ref (TArray(length, (get_reference_to env t'))))
+					TRef (TArray(length, (get_reference_to env t')))
 		
 		| TRecord list -> 
 					let list' = 
 							List.map (fun (s, t') ->
 														(s, get_reference_to env t')
 												) list in
-					TRef (ref (TRecord list'))
+					TRef (TRecord list')
 
-		| TClass_id s -> 
+		| TType_id s -> 
 					let t' = MyMap.find s env in
 						get_reference_to env t'
 
-		| _ -> TRef (ref t);;
+		| _ -> TRef t;;
 

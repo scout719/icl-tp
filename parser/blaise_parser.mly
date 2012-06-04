@@ -241,7 +241,7 @@ type_decl:
 | rec_type { $1 }
 | object_type { $1 }
 | class_type { $1 }
-| ID { TClass_id($1) }
+| ID { TType_id($1) }
 ;
 
 class_type:
