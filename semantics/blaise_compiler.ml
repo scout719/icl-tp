@@ -267,6 +267,8 @@ let rec compile_default_type t =
 		
 		| TObject (name, list) -> compile_default_type (TRecord list)
 
+		| TClass _ -> ["ldnull"] @ (ldc 0) @ new_closure
+
 		| TType_id name -> 
 					let t = TypeEnvMap.find name !types_env in
 						compile_default_type (unfold_type !types_env t)
@@ -285,6 +287,8 @@ let rec compile_assign t1 t2 =
 					swap @ closure_copy_to
 		| TObject _, _ ->
 					swap @ record_copy_to
+		| TClass _, _ ->
+					swap @ closure_copy_to
 		| _ -> 
 					cell_set
 

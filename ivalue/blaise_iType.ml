@@ -175,14 +175,10 @@ let rec equals env compare_list t1 t2 =
   													) true list1 list2
   
   		| TType_id name1, _ -> 
-            (* let list1 = List.assoc name1 env in *)
-            (* let new_t1 = TObject("", list1) in  *)
 						let new_t1 = MyMap.find name1 env in
               equals' new_t1 t2
   
   		| _, TType_id name2 -> 
-            (* let list2 = List.assoc name2 env in *)
-            (* let new_t2 = TObject("", list2) in  *)
 						let new_t2 = MyMap.find name2 env in
               equals' t1 new_t2
   
@@ -190,14 +186,10 @@ let rec equals env compare_list t1 t2 =
   					true
   
   		| TObject (name1, list1) , TObject (name2, list2) ->
-            (* if contains t1 t2 compare_list then                                            *)
-            (*   true                                                                         *)
-            (* else                                                                           *)
-            (*   let new_compare_list = (t1, t2)::compare_list in                             *)
-            (*   let new_env1 = if name1 <> "" then (name1, list1)::env else env in           *)
-            (*   let new_env2 = if name2 <> "" then (name2, list2)::new_env1 else new_env1 in *)
+              let new_env1 = if name1 <> "" then MyMap.add name1 t1 env else env in
+              let new_env2 = if name2 <> "" then MyMap.add name2 t2 new_env1 else new_env1 in
       					List.fold_left2 (fun prev_compare (s1, t1) (s2, t2) ->
-													if prev_compare && s1 = s2 && equals' (*new_env2 new_compare_list*) t1 t2 then
+													if prev_compare && s1 = s2 && equals new_env2 new_compare_list t1 t2 then
 														true
 													else 
 														false

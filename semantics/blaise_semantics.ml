@@ -460,6 +460,8 @@ and evalDecls env d =
 													evalOpers prev_env x
 											) env list
 
+	| _ -> env (* dummy (types not needed on interpreter) *)
+
 
 (***************************************************************************)
 (************************     INTERPRETER PROG   ***************************)
