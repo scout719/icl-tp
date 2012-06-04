@@ -56,13 +56,34 @@ let find s env =
 let assoc k v env =
 	EnvMap.add k v env
 
+(* Function to trim a string *)
+(* (retirada de http://stackoverflow.com/questions/1584758/how-do-i-strip-whitespace-from-a-string-in-ocaml) *)
+let trim str =
+	if str = "" then "" else   let search_pos init p next =
+    let rec search i =
+      if p i then raise(Failure "empty") else
+      	match str.[i] with
+      		| ' ' | '\n' | '\r' | '\t' -> search (next i)
+      		| _ -> i
+    		in
+    			search init in
+				let len = String.length str in
+					try
+    				let left = search_pos 0 (fun i -> i >= len) (succ)
+    				and right = search_pos (len - 1) (fun i -> i < 0) (pred)
+    					in
+    						String.sub str left (right - left + 1)
+					with
+						| Failure "empty" -> "" ;;
+
 (* Funcao que consoante o valor passado em v converte o valor da string s *)
 (* para o valor correcto *)
 let value_from_string v s =
+	let new_s = trim s in
 	match v with
-		| NumberValue _ -> NumberValue(int_of_string s)
-		| StringValue _ -> StringValue(s)
-		| BooleanValue _ -> BooleanValue(bool_of_string s)
+		| NumberValue _ -> NumberValue(int_of_string new_s)
+		| StringValue _ -> StringValue(new_s)
+		| BooleanValue _ -> BooleanValue(bool_of_string new_s)
 		| _ -> raise (Invalid_value_to_read (string_of_ivalue v))
 		
 (* Funcao que conforme o parametro lvalue desreferencia implicitamente ou *)

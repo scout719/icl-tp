@@ -319,7 +319,9 @@ let get_oper_info oper =
 		| Procedure(name, list, _, _, t) -> 
 					let args_types_list = 
 								List.map (fun (_, t) -> t ) list in
-						(name, TProc(args_types_list));;
+						(name, TProc(args_types_list))
+
+		| _ -> ("", TNone "") (* ignore classes *);;
 
 
 let get_methods opers = 
@@ -684,6 +686,8 @@ let rec compile_oper env o =
       		let new_function = Function(name, [], [types; consts; Vars new_vars; Operations(opers, t1)], new_statement, self_type) in
 					(* print_string ((unparse_oper new_function)^"\n"); *)
       			compile_oper env new_function
+
+	| _ -> ([], [], env) (* dummy *)
 
 and compile_decl env d =
 	match d with
