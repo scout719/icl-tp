@@ -426,11 +426,24 @@ Para a execução do programa em \emph{CIL} são usadas as seguintes classes em 
 A compilação de um programa começa com a criação de um novo ambiente e começo de uma nova contagem de declarações locais. De seguida são compilados os blocos de declarações. No bloco de declaração de tipos é percorrida a lista das declarações e são adicionadas ao ambiente dos tipos a associação entre o identificador e o tipo a que corresponde. Na declaração de constantes são incrementadas as declarações locais e associados os identificadores a endereços novos no \emph{stackframe} actual. De seguida é compilada a expressão de cada constante juntamente com a compilação das instruções para colocar no \emph{StackFrame} a nova constante. A compilação das variáveis é semelhante à compilação de constantes sendo que em vez de compilar a expressão fornecida é compilado o valor por definição para cada variável. Quanto aos procedimentos, para a sua compilação é necessário obter um novo identificar para a operação, compilar o \emph{closure}, começar um novo ambiente, adicionar ao ambiente a ligação do nome a um endereço para poder haver recursividade e fazer um \emph{backup} do ambiente de tipos para ser restaurado depois de compilado o corpo do procedimento. Depois é ncessário atribuir a cada parâmetro um novo endereço e adicioná-lo ao ambiente, de seguida compilam-se os blocos de declarações e finalmente o corpo do procedimento. Por fim restaura-se o ambiente de tipos, termina-se o ambiente do procedimento e compilam-se as instruções para adicionar ao \emph{stackframe} o novo procedimento. Para as funções o processo é parecido com o procedimento sendo que antes de avaliar os blocos de declarações é necessário adicionar ao ambiente uma variável \emph{result} com o tipo de retorno da função. Após se compilar o corpo da função é necessário compilar as intruções para se obter o resultado da função e colocá-lo na pilha. Quanto às classes a técnica usada é igual à do interpretador sendo no final chamada a compilação da função criada.
 Após compilar os blocos de declaração resta compilar o corpo do programa e no final optimizar o programa compilado percorrendo todas as instruções geradas e removendo \emph{box, unbox} e \emph{ldobj} ao mesmo tipo seguidos.
 
+\newpage
 As compilações mais complicadas são explicadas de seguida:
 
 \subsubsection{Assign}
 
+Para se compilar uma afectação é necessário recorrer às anotações deixadas pelo verificador de tipo para se saber qual o tipo que se está a afectar. Mediante o tipo que está no nó, e à excepção dos tipos simples em que apenas é necessário fazer um \emph{Set} à célula que representará o lado esquerdo da afectação, trocam-se os objectos no topo da pilha e chama-se o método \emph{CopyTo} da classe respectiva ao tipo das expressões da afectação.
 
+\subsubsection{Read}
+
+A compilação do \emph{Read} é auxiliada pela classe \emph{Reader} da qual é chamado o método correspondente para ler um valor do tipo que foi anotado na verificação de tipos. No caso de um \emph{ReadLn} basta no final chamar o método \emph{ReadLine} do \emph{Reader} para esvaziar o \emph{buffer}.
+
+\subsubsection{CallProc}
+
+O processo de compilar um procedimento começa por se compilar a expressão correspondente à obtenção do \emph{closure} do procedimento. De seguida é compilada a lista de argumentos do procedimento sendo que no fim de cada um é efectuada a afectação no \emph{stackframe} ao endereço que foi atribuído aquando da compilação da declaração do procedimento. Por fim é compilada a chamada ao procedimento obtendo o \emph{stackframe} actual, criando um novo, iniciando os argumentos do procedimento e colocando-os na \emph{stackframe} e finalmente obtendo-se o apontador para o procedimento que está no \emph{Closure} e compilando a instrução \emph{CIL} de chamada de um procedimento.
+
+\subsubsection{CallFun}
+
+A compilação da chamada de uma função é igual à chamada de um procedimento visto que, ao contrário do interpretador, não é necessário adicionar ao ambiente a variável \emph{self} nem compilar as instruções para a colocar no topo da pilha como retorno da função porque a adição e a compilação da sua obtenção já foram efectuadas aquando da declaração da função.
 
 % Como funciona, qual o resultado (quais as traducoes de cada construcao da linguagem), quais as estruturas que suportam a compilacao e a execucao dos programas compilados?
 \newpage
