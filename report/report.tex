@@ -1,0 +1,81 @@
+\documentclass[a4paper,oneside,titlepage]{report} 
+\parskip 7.2pt
+\usepackage{setspace}
+\onehalfspacing
+\usepackage[portuguese]{babel}
+\usepackage{fullpage}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{indentfirst}
+\usepackage{setspace}
+\usepackage{color}
+\usepackage{textcomp}
+\usepackage[table]{xcolor}
+\usepackage{listings}
+\usepackage[pdftex]{graphicx}
+%\usepackage{inconsolata}
+\usepackage{ucs}
+\usepackage[portuguese]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{ae,aecompl}
+\usepackage{indentfirst}
+\usepackage{amsmath, amsthm, amssymb}
+\usepackage[hmargin=3cm,vmargin=3.5cm]{geometry}
+\usepackage{multirow}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\definecolor{lbcolor}{rgb}{0.9,0.9,0.9}
+\definecolor{grey}{rgb}{0.95,0.95,0.95}
+\definecolor{name}{rgb}{0.5,0.5,0.5}
+\lstset{
+    language=c,
+    basicstyle=\scriptsize,
+    upquote=true,
+    aboveskip={1.5\baselineskip},
+    columns=fullflexible,
+    showstringspaces=false,
+    extendedchars=true,
+    breaklines=true,
+    showtabs=false,
+    showspaces=false,
+    showstringspaces=false,
+    identifierstyle=\ttfamily,
+    keywordstyle=\color[rgb]{0,0,1},
+	keywordstyle=[2]\color[rgb]{0,0,1},
+    morekeywords=[2]{String, boolean, long, public, private, class, new, this, Product},
+    commentstyle=\color[rgb]{0.133,0.545,0.133},
+    stringstyle=\color[rgb]{0.627,0.126,0.941} 
+}
+
+
+\title{\LARGE{Linguagem O-Blaise} \\}
+\author{Hélder Marques \\ 31944 \\ hd.marques@campus.fct.unl.pt}
+\date{\today}
+
+\begin{document}
+
+%\maketitle
+\input{1.cover}
+\newpage
+
+\renewcommand{\contentsname}{Índice}
+\tableofcontents
+\newpage
+
+\input{2.intro}
+\newpage
+
+\input{3.descricao}
+\newpage
+
+\input{4.exemplos}
+\newpage
+
+\input{5.anexos}
+\newpage
+
+
+\end{document}
