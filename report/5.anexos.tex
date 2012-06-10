@@ -1,10 +1,8 @@
 \chapter{Anexos}
 
-\section{BNF da gramática}
-
+%\section{BNF da gramática}
 
 %(b) Listagem integral dos exemplos (positivos e alguns negativos)
-\newpage
 \flushbottom
 \section{Testes}
 \lstset{language=Pascal,
@@ -12,6 +10,27 @@ extendedchars=\true,
 inputencoding=utf8x}
 {
 \fontsize{9pt}{9}\selectfont
+\subsection*{Expressões}
+\subsubsection*{Source:}
+\lstinputlisting{tests/test_basic_expressions.blaise}
+\subsubsection*{Output:}
+\lstinputlisting{tests/test_basic_expressions.out}
+
+\subsection*{Funções}
+\subsubsection*{Source:}
+\lstinputlisting{tests/functionsWithFunctions.blaise}
+\subsubsection*{Output:}
+\lstinputlisting{tests/functionsWithFunctions.out}
+
+\subsection*{Funções como variável}
+\subsubsection*{Source:}
+\lstinputlisting{tests/varAsFun.blaise}
+\subsubsection*{Output:}
+\lstinputlisting{tests/varAsFun.out}
+
+\subsection*{Declaração de tipos}
+\subsubsection*{Source:}
+\lstinputlisting{tests/types.blaise}
 
 \subsection*{Stack interactiva}
 \subsubsection*{Source:}
@@ -29,6 +48,42 @@ inputencoding=utf8x}
 \lstinputlisting{tests/arrays.blaise}
 \subsubsection*{Output:}
 \lstinputlisting{tests/arrays.out}
+
+\newpage
+\subsection*{Objectos}
+\subsubsection*{Source:}
+\lstinputlisting{tests/objects6.blaise}
+\subsubsection*{Output:}
+\lstinputlisting{tests/objects6.out}
+\vspace{\baselineskip}
+\subsubsection*{Source:}
+\lstinputlisting{tests/assignObjects.blaise}
+\subsubsection*{Output:}
+\lstinputlisting{tests/assignObjects.out}
+
+\subsection*{Classes}
+\subsubsection*{Source:}
+\lstinputlisting{tests/OtherClassTest.blaise}
+\subsubsection*{Output:}
+\lstinputlisting{tests/OtherClassTest.out}
+
+\newpage
+\subsection*{Erros de tipificação}
+\subsubsection*{Source:}
+\lstinputlisting{tests/failType1.blaise}
+\subsubsection*{Output:}
+\lstinputlisting{tests/failType1.out}
+
+\subsubsection*{Source:}
+\lstinputlisting{tests/failType2.blaise}
+\subsubsection*{Output:}
+\lstinputlisting{tests/failType2.out}
+
+\subsubsection*{Source:}
+\lstinputlisting{tests/failType3.blaise}
+\subsubsection*{Output:}
+\lstinputlisting{tests/failType3.out}
+
 
 \flushbottom
 }

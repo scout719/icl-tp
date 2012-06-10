@@ -1,58 +1,77 @@
 \chapter{Descrição}
 
-O trabalho foi desenvolvido de forma a que apenas exista um ficheiro executável sendo que é passado para este uma flag indicando se é para interpretar ou compilar o código fonte fornecido. O código pode ser fornecido tanto através do caminho para o ficheiro, indicando a	seguir à flag qual é, e, caso não esteja presente, o programa fica à espera que seja introduzido no \emph{stdin} o código fonte.
-
-O trabalho foi dividido em módulos de forma a permitir uma fácil manutenção do código. 
+O trabalho foi desenvolvido de forma a que apenas exista um ficheiro executável 
+sendo que é passado para este uma flag indicando se é para interpretar ou 
+compilar o código fonte fornecido. O código pode ser fornecido tanto através do 
+caminho para o ficheiro, indicando a seguir à flag qual é, e, caso não esteja 
+presente, o programa fica à espera que seja introduzido no \emph{stdin} o 
+código fonte. O trabalho foi dividido em módulos de forma a permitir uma fácil 
+manutenção do código. 
 Para tal foram gerados os seguintes módulos:
 
 \begin{tabular}{|l|l|}
 \hline
-\multicolumn{2}{|l|}{\cellcolor{grey}Módulos}\\
+\multicolumn{2}{|l|}{\cellcolor{grey}Módulos}
+\\
 \hline
-$main.ml:$				& Módulo principal para executar o programa \\
+$main.ml:$				& Módulo principal para executar o programa 
+\\
 \hline
-$blaise\_lexer.mll:$	& Módulo com a especificação dos tokens \\
-						& reconhecidos pela linguagem \\
+$blaise\_lexer.mll:$	& Módulo com a especificação dos tokens 
+\\										& reconhecidos pela linguagem 
+\\
 \hline
-$blaise\_parser.mly:$	& Módulo com a especificação da gramática \\
-						& da linguagem \\
+$blaise\_parser.mly:$	& Módulo com a especificação da gramática 
+\\										& da linguagem 
+\\
 \hline
-$ivalue.ml:$			& Módulo onde estão definidos os valores de \\
-						& de retorno do interpretador, o valor por \\
-						& omissão para cada tipo, as operações básicas \\
-						& sobre os valores e uma função para \\
-						& representar os valores em forma de string \\
+$ivalue.ml:$			& Módulo onde estão definidos os valores de 
+\\						& de retorno do interpretador, o valor por 
+\\						& omissão para cada tipo, as operações básicas 
+\\						& sobre os valores e uma função para 
+\\						& representar os valores em forma de string 
+\\
 \hline
-$blaise\_iType.ml:$		& Módulo onde estão definidos os tipos das \\
-						& linguagens, as várias operações que podem ser \\
-						& feitas sobre os tipos e uma função para \\
-						& representar os vários tipo em forma de string \\
+$blaise\_iType.ml:$		& Módulo onde estão definidos os tipos das 
+\\						& linguagens, as várias operações que podem ser 
+\\						& feitas sobre os tipos e uma função para 
+\\						& representar os vários tipo em forma de string 
+\\
 \hline
-\end{tabular}
-
-\begin{tabular}{|l|l|}
+$blaise\_syntax.ml:$ 	& Módulo onde estão definidos os nós da AST 
+\\						& das linguagens, funções para obter o tipo 
+\\						& de um nó e funções para representar os 
+\\						& vários nós em forma de string 
+\\
 \hline
-$blaise\_syntax.ml:$ 	& Módulo onde estão definidos os nós da AST \\
-						& das linguagens, funções para obter o tipo \\
-						& de um nó e funções para representar os \\
-						& vários nós em forma de string \\
+$blaise\_typechk.ml:$	& Módulo onde está a função de tipificação dos 
+\\						& nós da AST 
+\\
 \hline
-$blaise\_typechk.ml:$	& Módulo onde está a função de tipificação dos \\
-						& nós da AST \\
+$blaise\_semantics.ml:$	& Módulo onde está definida a função de 
+\\						& avaliação das linguagens 
+\\ 
 \hline
-$blaise\_semantics.ml:$	& Módulo onde está definida a função de \\
-						& avaliação das linguagens \\ 
-\hline
-$blaise\_compiler.ml:$	& Módulo onde está definida a função de \\
-						& compilação das linguagens \\
+$blaise\_compiler.ml:$	& Módulo onde está definida a função de 
+\\						& compilação das linguagens 
+\\
 \hline
 \end{tabular}
 
 \vspace{\baselineskip}
-A interpretação/compilação de um programa divide-se várias fases. A primeira é verificar se o programa passa no parser, ou seja, se estrutura do programa está de acordo com a gramática das linguagens. Após passar esta fase é executado o verificador de tipos que verifica se o programa está semanticamente correcto e caso não esteja imprime uma mensagem de erro. Caso o programa passe na verificação de tipos é então, no caso do interpretador, avaliado o programa e impresso no \emph{stdin} o resultado da avaliação, e no caso do compilador, compilado o programa as impressas no \emph{stdin} as instruções \emph{CIL} geradas. 
+A interpretação/compilação de um programa divide-se várias fases. A primeira é 
+verificar se o programa passa no parser, ou seja, se estrutura do programa está 
+de acordo com a gramática das linguagens. Após passar esta fase é executado o 
+verificador de tipos que verifica se o programa está semanticamente correcto e 
+caso não esteja imprime uma mensagem de erro. Caso o programa passe na 
+verificação de tipos é então, no caso do interpretador, avaliado o programa e 
+impresso no \emph{stdin} o resultado da avaliação, e no caso do compilador, 
+compilado o programa as impressas no \emph{stdin} as instruções \emph{CIL} 
+geradas. 
 
 %Qual a arquitectura da soluçãoo (como se divide a implementação do trabalho em
-%módulos), quais as fases da execução, quais as estruturas de dados e algoritmos envolvidos, como estao
+%módulos), quais as fases da execução, quais as estruturas de dados e 
+%algoritmos envolvidos, como estao
 %implementados, etc.
 \newpage
 \section{Sintaxe}
@@ -63,20 +82,21 @@ A interpretação/compilação de um programa divide-se várias fases. A primeir
 \fontsize{9pt}{10}\selectfont
 \ttfamily
 \begin{tabular}{ll}
-\multicolumn{2}{l}{P ::= \underline{program} Id; B.}\\\\
-
-\multicolumn{2}{l}{B ::= TD; C; V; D$_1$ ; ...; D$_n$ ; BS}\\\\
-
-\multicolumn{2}{l}{TD ::= \underline{type} t$_1$ = T$_1$; ...; t$_n$ = T$_n$;}\\\\
-
-\multicolumn{2}{l}{C ::= \underline{const} x$_1$ = E$_1$ ; ...; x$_n$ = E$_n$}\\\\
-
-\multicolumn{2}{l}{V ::= \underline{var} x$_1$ ,... ,x$_k$:T$_1$ ;... ;x$_k$ ,... ,x$_n$:T$_k$}\\\\
-
-\multicolumn{2}{l}{BS ::= \underline{begin} S \underline{end}}\\
-
-\multicolumn{2}{l}{BS\_O ::= BS | S}\\\\
-
+\multicolumn{2}{l}{P ::= \underline{program} Id; B.}
+\\\\
+\multicolumn{2}{l}{B ::= TD; C; V; D$_1$ ; ...; D$_n$ ; BS}
+\\\\
+\multicolumn{2}{l}{TD ::= \underline{type} t$_1$ = T$_1$; ...; t$_n$ = T$_n$;}
+\\\\
+\multicolumn{2}{l}{C ::= \underline{const} x$_1$ = E$_1$ ; ...; x$_n$ = E$_n$}
+\\\\
+\multicolumn{2}{l}{V ::= \underline{var} x$_1$ ,... ,x$_k$:T$_1$ ;... ;x$_k$ 
+,... ,x$_n$:T$_k$}
+\\\\
+\multicolumn{2}{l}{BS ::= \underline{begin} S \underline{end}}
+\\
+\multicolumn{2}{l}{BS\_O ::= BS | S}
+\\\\
 \begin{tabular}{ll}
 E &::=\\
 &| $number$\\
@@ -154,66 +174,82 @@ $
 \\
 \begin{array}{lll}
 EXPR:	& \\
-		& \textbf{Number:}		&int \rightarrow EXPR\\
-		& \textbf{String:}		&string \rightarrow EXPR\\
-		& \textbf{Boolean:}		&bool \rightarrow EXPR\\
-		& \textbf{Array:}		&EXPR~list \times ITYPE \rightarrow EXPR\\
-		& \textbf{Record:}		&(string \times EXPR)~list \times ITYPE \rightarrow EXPR\\
-		& \textbf{New:}			&EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{Add:}			&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{Sub:}			&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{Compl:}		&EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{Mult:}		&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{Div:}			&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{Mod:}			&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{Eq:}			&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{Neq:}			&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{Gt:}			&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{Lt:}			&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{Gteq:}		&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{Lteq:}		&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{And:}			&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{Or:}			&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{Not:}			&EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{Id:}			&string \times ITYPE \rightarrow EXPR\\
-		& \textbf{GetArray:}	&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
-		& \textbf{GetRecord:}	&EXPR \times string \times ITYPE \rightarrow EXPR\\
-		& \textbf{CallFun:}		&EXPR \times EXPR~list \times ITYPE \rightarrow EXPR\\
+		& \textbf{Number:}	&int \rightarrow EXPR\\
+		& \textbf{String:}	&string \rightarrow EXPR\\
+		& \textbf{Boolean:}	&bool \rightarrow EXPR\\
+		& \textbf{Array:}	&EXPR~list \times ITYPE \rightarrow EXPR\\
+		& \textbf{Record:}	&(string \times EXPR)~list \times ITYPE \rightarrow 
+																		EXPR\\
+		& \textbf{New:}		&EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{Add:}		&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{Sub:}		&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{Compl:}	&EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{Mult:}	&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{Div:}		&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{Mod:}		&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{Eq:}		&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{Neq:}		&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{Gt:}		&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{Lt:}		&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{Gteq:}	&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{Lteq:}	&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{And:}		&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{Or:}		&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{Not:}		&EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{Id:}		&string \times ITYPE \rightarrow EXPR\\
+		& \textbf{GetArray:}&EXPR \times EXPR \times ITYPE \rightarrow EXPR\\
+		& \textbf{GetRecord:}&EXPR \times string \times ITYPE \rightarrow EXPR\\
+		& \textbf{CallFun:}		&EXPR \times EXPR~list \times ITYPE \rightarrow 
+																		EXPR\\
 \end{array}
 \\
 \begin{array}{lll}
 STAT:	&\\
-		&\textbf{Assign:}	&EXPR \times EXPR \times EXPR \times ITYPE \rightarrow STAT\\
+		&\textbf{Assign:}	&EXPR \times EXPR \times EXPR \times ITYPE 
+															\rightarrow	STAT\\
 		&\textbf{While:}	&EXPR \times STAT \times ITYPE \rightarrow STAT\\
 		&\textbf{If\_Else:}	&EXPR \times STAT \times STAT \rightarrow STAT\\
 		&\textbf{If:}		&EXPR \times STAT \times ITYPE \rightarrow STAT\\
 		&\textbf{Write:}	&EXPR~list \times ITYPE \rightarrow STAT\\
 		&\textbf{WriteLn:}	&EXPR~list \times ITYPE \rightarrow STAT\\
-		&\textbf{Read:}		&string~list \times ITYPE~list \times ITYPE \rightarrow STAT\\
-		&\textbf{ReadLn:}	&string~list \times ITYPE~list \times ITYPE \rightarrow STAT\\
+		&\textbf{Read:}		&string~list \times ITYPE~list \times ITYPE
+		 													\rightarrow STAT\\
+		&\textbf{ReadLn:}	&string~list \times ITYPE~list \times ITYPE 
+															\rightarrow STAT\\
 		&\textbf{Seq:}		&STAT \times STAT \times ITYPE \rightarrow STAT\\
-		&\textbf{CallProc:}	&EXPR \times EXPR~list \times ITYPE \rightarrow STAT\\
+		&\textbf{CallProc:}	&EXPR \times EXPR~list \times ITYPE \rightarrow 
+																		STAT\\
 \end{array}
 \\
 \begin{array}{lll}
 DECL\_BLOCK:	&\\
-				&\textbf{Types:}		&(string \times ITYPE)~list \rightarrow DECL\_BLOCK\\
-				&\textbf{Consts:}		&(string \times EXPR)~list \times ITYPE \rightarrow DECL\_BLOCK\\
-				&\textbf{Vars:}			&(ITYPE \times string~list)~list \rightarrow DECL\_BLOCK\\
-				&\textbf{Operations:}	&OPER~list \times ITYPE \rightarrow DECL\_BLOCK\\
+				&\textbf{Types:}		&(string \times ITYPE)~list \rightarrow 
+																DECL\_BLOCK\\
+				&\textbf{Consts:}		&(string \times EXPR)~list \times ITYPE 
+													\rightarrow DECL\_BLOCK\\
+				&\textbf{Vars:}			&(ITYPE \times string~list)~list 
+													\rightarrow DECL\_BLOCK\\
+				&\textbf{Operations:}	&OPER~list \times ITYPE \rightarrow 
+																DECL\_BLOCK\\
 \end{array}
 \\
 \begin{array}{lll}
 OPER:	&\\
-		&\textbf{Function:}		&string \times (string \times ITYPE)~list \times DECL\_BLOCK~list \times STAT \times ITYPE \rightarrow OPER\\
-		&\textbf{Procedure:}	&string \times (string \times ITYPE)~list \times DECL\_BLOCK~list \times STAT \times ITYPE \rightarrow OPER\\
-		&\textbf{Class:}		&string \times DECL\_BLOCK~list \times STAT \times ITYPE\\
+		&\textbf{Function:}		&string \times (string \times ITYPE)~list \times 
+													DECL\_BLOCK~list~ \times \\
+								&&STAT \times ITYPE \rightarrow OPER\\
+		&\textbf{Procedure:}	&string \times (string \times ITYPE)~list \times 
+													DECL\_BLOCK~list~ \times \\
+								&&STAT \times ITYPE \rightarrow OPER\\
+		&\textbf{Class:}		&string \times DECL\_BLOCK~list \times STAT 
+																\times ITYPE\\
 \end{array}
 \\
 \begin{array}{lll}
 
 PROGRAM:	&\\
-			&\textbf{Program:}	&string \times DECL\_BLOCK~list \times STAT \times ITYPE \rightarrow PROGRAM\\
+			&\textbf{Program:}	&string \times DECL\_BLOCK~list \times STAT 
+											\times ITYPE \rightarrow PROGRAM\\
 \end{array}
 \\
 \begin{array}{lll}
@@ -226,8 +262,10 @@ ITYPE:	&\\
 		&\textbf{TArray:}		&int \times ITYPE \rightarrow ITYPE\\
 		&\textbf{TRecord:}		&(string \times ITYPE)~list \rightarrow ITYPE\\
 		&\textbf{TRef:}			&ITYPE \rightarrow ITYPE\\
-		&\textbf{TClass:} 		&string \times (string \times ITYPE)~list \rightarrow ITYPE\\
-		&\textbf{TObject:}		&string \times (string \times ITYPE)~list \rightarrow ITYPE\\
+		&\textbf{TClass:} 		&string \times (string \times ITYPE)~list 
+															\rightarrow ITYPE\\
+		&\textbf{TObject:}		&string \times (string \times ITYPE)~list 
+															\rightarrow ITYPE\\
 		&\textbf{TType\_id:}		&string \rightarrow ITYPE\\
 		&\textbf{TUnit:}		&void \rightarrow ITYPE\\
 		&\textbf{TNone:}		&string \rightarrow ITYPE\\
@@ -236,9 +274,12 @@ ITYPE:	&\\
 $\\
 }
 
-A árvore sintáctica abstracta é construída pelo parser sendo que no campo do tipo do nó, excepto quando é indicado explicitamente qual é o tipo, é colocado $TUndefined$ para indicar que o nó em questão ainda não foi tipificado.
+A árvore sintáctica abstracta é construída pelo parser sendo que no campo do 
+tipo do nó, excepto quando é indicado explicitamente qual é o tipo, é colocado 
+$TUndefined$ para indicar que o nó em questão ainda não foi tipificado.
 
-%Qual a gramática (sintaxe concreta), qual a sintaxe abstracta e como se constroi.
+%Qual a gramática (sintaxe concreta), qual a sintaxe abstracta e como se 
+%constroi.
 \newpage
 \section{Interpretador}
 
@@ -256,9 +297,11 @@ IVALUE:	&\\
 		&\textbf{ArrayValue:}	&IVALUE~array \rightarrow IVALUE\\
 		&\textbf{RecordValue:}	&IVALUE~map \rightarrow IVALUE\\
 		&\textbf{RefValue:}		&IVALUE~ref \rightarrow IVALUE\\
-		&\textbf{FunValue:}		&(string \times ITYPE)~list \times DECL\_BLOCK~list \times STAT \times \\
+		&\textbf{FunValue:}		&(string \times ITYPE)~list \times 
+										DECL\_BLOCK~list \times STAT \times \\
 		&&ITYPE \times (IVALUE~map)~ref \rightarrow IVALUE\\
-		&\textbf{ProcValue}:	&(string \times ITYPE)~list \times DECL\_BLOCK~list \times STAT \times \\
+		&\textbf{ProcValue}:	&(string \times ITYPE)~list \times 
+										DECL\_BLOCK~list \times STAT \times \\
 		&&(IVALUE~map)~ref \rightarrow IVALUE\\
 		&\textbf{CustomValue}:	&void \rightarrow IVALUE\\
 		&\textbf{NoneValue}:	&void \rightarrow IVALUE\\
@@ -273,6 +316,7 @@ $
 \ttfamily
 $
 \begin{array}{lll}
+\textbf{ENV}:~IVALUE~map\\\\
 evalExp:		&ENV \times bool \times EXPR \rightarrow IVALUE\\
 evalState:		&ENV \times STAT \rightarrow void\\
 evalOpers:		&ENV \times	OPER \rightarrow ENV\\
@@ -282,67 +326,171 @@ evalAllDecls:	&DECL\_BLOCK \times DECL\_BLOCK \times DECL\_BLOCK \times \\
 evalProgram:	&PROGRAM \rightarrow void\\
 \end{array}
 $
-}\\
+}
 
-O resultado da interpretação de um nó da árvore abstracta é um valor dos definidos acima.
+O resultado da interpretação de um nó da árvore abstracta é um valor dos 
+definidos acima.
 
 \subsection{Estruturas auxiliares}
 
-Para auxiliar a avaliação de um programa é usado um mapa no qual está o mapeamento entre quais os identificadores que existem e qual o seu valor. Existe ainda um \emph{buffer} para se guardar as linhas lidas do \emph{input} para serem usadas na avaliação dos nós \emph{Read} e \emph{ReadLn}.
+Para auxiliar a avaliação de um programa é usado um mapa no qual está o 
+mapeamento entre quais os identificadores que existem e qual o seu valor. 
+Existe ainda um \emph{buffer} para se guardar as linhas lidas do \emph{input} 
+para serem usadas na avaliação dos nós \emph{Read} e \emph{ReadLn}.
 
 \subsection{Como funciona}
-A avaliação do programa começa com a avaliação do bloco de declarações. No interpretador é ignorada a secção de declaração de tipo porque apenas é necessário no verificador de tipos para validar a correcção do programa. Na parte das declarações de constantes são avaliadas as expressões asssociadas a cada identificador e adicionada ao ambiente essa relação. De seguida são avaliadas as variáveis em que a única coisa que é necessária é adicionar ao ambiente a associação do identificador fornecido ao valor de omissão do tipo que corresponde à variável. Os valores por omissão da linguagem são:
+A avaliação do programa começa com a avaliação do bloco de declarações. No 
+interpretador é ignorada a secção de declaração de tipo porque apenas é 
+necessário no verificador de tipos para validar a correcção do programa. Na 
+parte das declarações de constantes são avaliadas as expressões asssociadas a 
+cada identificador e adicionada ao ambiente essa relação. De seguida são 
+avaliadas as variáveis em que a única coisa que é necessária é adicionar ao 
+ambiente a associação do identificador fornecido ao valor de omissão do tipo 
+que corresponde à variável. Os valores por omissão da linguagem são:
 
-{
+\noindent{
 \fontsize{9pt}{10}\selectfont
 \begin{tabular}{llll}
 $\textbf{default\_type}:~ITYPE \rightarrow IVALUE$\\\\
-\textbf{TNumber}														&$\rightarrow$ 	&0\\
-\textbf{TString}														&$\rightarrow$ 	&`` ''\\
-\textbf{TBoolean}														&$\rightarrow$ 	&\emph{false}\\
-\textbf{TArray(}\emph{n}\textbf{,} \emph{t}\textbf{)}										&$\rightarrow$ 	&[\emph{a$_0$, ..., a$_{n-1}$}] : \emph{a$_i = $ default\_type(t) }\\
-\textbf{TRecord(}[(\emph{s$_0$, t$_0$}), ..., (\emph{s$_n$, t$_n$})]\textbf{)}	&$\rightarrow$ 	&\{ \emph{s$_0$} : \emph{default\_type(t$_0$)}, ..., \emph{s$_n$} : \emph{default\_type(t$_n$)}\}\\
-\textbf{TObject(}\emph{x}, [(\emph{s$_0$, \_}), ..., (\emph{s$_n$, \_})]\textbf{)}	&$\rightarrow$	&\{ \emph{s$_0$} : \emph{TNone}(\emph{``dummy''}), ..., \emph{s$_n$} : \emph{TNone}(\emph{``dummy''})\}
+\textbf{TNumber}	&$\rightarrow$ 	&0\\
+\textbf{TString}	&$\rightarrow$ 	&`` ''\\
+\textbf{TBoolean}	&$\rightarrow$ 	&\emph{false}\\
+\textbf{TArray(}\emph{n}\textbf{,} \emph{t}\textbf{)}	&$\rightarrow$ 	
+		&[\emph{a$_0$, ..., a$_{n-1}$}] : \emph{a$_i = $ default\_type(t) }\\
+\textbf{TRecord(}[(\emph{s$_0$, t$_0$}), ..., (\emph{s$_n$, t$_n$})]\textbf{)} 
+		&$\rightarrow$ 	&\{ \emph{s$_0$} : \emph{default\_type(t$_0$)}, ..., 
+								\emph{s$_n$} : \emph{default\_type(t$_n$)}\}\\
+\textbf{TObject(}\emph{x}, 
+						[(\emph{s$_0$, \_}), ..., (\emph{s$_n$, \_})]\textbf{)}	
+			&$\rightarrow$	&\{ \emph{s$_0$} : \emph{TNone}(\emph{``dummy''}),
+						 ..., \emph{s$_n$} : \emph{TNone}(\emph{``dummy''})\}
 \end{tabular}
 }\\
 
-No caso de tipos declarados pelo utilizador o valor por omissão é um valor especial que não tem valor nenhum e que apenas serve para indicar que é uma variável de um tipo declarado. 
+No caso de tipos declarados pelo utilizador o valor por omissão é um valor 
+especial que não tem valor nenhum e que apenas serve para indicar que é uma 
+variável de um tipo declarado. 
 
-Após a avaliação das variáveis é a vez de se interpretar as operações que na linguagem se dividem em funções, procedimentos e classes. A interpretação de funções e procedimentos é igual, para isso é apenas necessário criar uma referência para o ambiente actual, criar um \emph{closure} com os tipos dos argumentos, os nós correspondentes ao bloco de declarações dentro da operação, o nó correspondente ao corpo da operação e, no caso da função, o tipo de retorno da mesma. É ainda adicionada a referência para o ambiente para haver a possibilidade de haver operações recursivas. No final é associado ao ambiente o \emph{closure} com o nome fornecido.
+Após a avaliação das variáveis é a vez de se interpretar as operações que na 
+linguagem se dividem em funções, procedimentos e classes. A interpretação de 
+funções e procedimentos é igual, para isso é apenas necessário criar uma 
+referência para o ambiente actual, criar um \emph{closure} com os tipos dos 
+argumentos, os nós correspondentes ao bloco de declarações dentro da operação, 
+o nó correspondente ao corpo da operação e, no caso da função, o tipo de 
+retorno da mesma. É ainda adicionada a referência para o ambiente para haver 
+a possibilidade de haver operações recursivas. No final é associado ao 
+ambiente o \emph{closure} com o nome fornecido.
   
-Em relação às classes o procedimento que se faz é, através de \emph{syntactic sugar}, transformar a classe numa função geradora de objectos. Para tal é percorrida a classe uma vez para se obter a lista dos métodos disponíveis, depois é criado o tipo de retorno da função criada que será um \emph{TRecord} em que os \emph{fields} terão os nomes dos métodos e cada um terá a \emph{closure} associada a cada método. De seguida é adicionado ao bloco das variáveis o \emph{self} que será o exactamente o \emph{Record} que será retornado pela função para permitir aos vários métodos terem todos os outros métodos disponíveis através do \emph{Record self}. Finalmente são adicionados ao corpo da \emph{Class} a atribuição à variável \emph{self} e o retorno do mesmo e é criado um novo nó \emph{Function} com os parâmetros necessários e é chamada a avaliação de uma função com este nó.
+Em relação às classes o procedimento que se faz é, através de \emph{syntactic 
+sugar}, transformar a classe numa função geradora de objectos. Para tal é 
+percorrida a classe uma vez para se obter a lista dos métodos disponíveis, 
+depois é criado o tipo de retorno da função criada que será um \emph{TRecord} 
+em que os \emph{fields} terão os nomes dos métodos e cada um terá a 
+\emph{closure} associada a cada método. De seguida é adicionado ao bloco das 
+variáveis o \emph{self} que será o exactamente o \emph{Record} que será 
+retornado pela função para permitir aos vários métodos terem todos os outros 
+métodos disponíveis através do \emph{Record self}. Finalmente são adicionados 
+ao corpo da \emph{Class} a atribuição à variável \emph{self} e o retorno do 
+mesmo e é criado um novo nó \emph{Function} com os parâmetros necessários e é 
+chamada a avaliação de uma função com este nó.
 
-Por fim é necessário avaliar o corpo do programa. Nesta secção porderão estar os mais variados nós sendo que os mais complexos são:
+Por fim é necessário avaliar o corpo do programa. De seguida explicam-se os 
+nós mais complicados ou diferentes da linguagem dada nas aulas:
 
 \subsubsection{Assign}
 
-No \emph{Assign} a parte mais complicada é a de atribuir a uma variável a cópia do valor que está do lado direito da atribuição. Para valores simples isto é facilmente conseguido obtendo a referência e atribuíndo-lhe o valor do outro valor. Quanto aos vectores e registos os valores são copiados índice a índice ou campo a campo chamando recursivamente a função que trata da atribuição de valores. No caso de procedimentos e funções o valor do \emph{closure} da direita é copiado integralmente para a referência do lado esquerdo. Nos objectos como são traduzidos para \emph{Records} a cópia é efectuada campo a campo.
+No \emph{Assign} a parte mais complicada é a de atribuir a uma variável a 
+cópia do valor que está do lado direito da atribuição. Para valores simples 
+isto é facilmente conseguido obtendo a referência e atribuíndo-lhe o valor do 
+outro valor. Quanto aos vectores e registos os valores são copiados índice a 
+índice ou campo a campo chamando recursivamente a função que trata da 
+atribuição de valores. No caso de procedimentos e funções o valor do 
+\emph{closure} da direita é copiado integralmente para a referência do lado 
+esquerdo. Nos objectos como são traduzidos para \emph{Records} a cópia é 
+efectuada campo a campo.
 
 \subsubsection{Read}
 
-A leitura de dados de \emph{input} é efectuada usando um buffer ao qual vamos buscar os \emph{tokens} a serem lidos. Se for efectuado um \emph{Read} e não existir nada no \emph{buffer} fica à espera de dados no \emph{stdin}. Quando existe um \emph{ReadLn} o comportamento é igual sendo que no final o \emph{buffer} é esvaziado.
+A leitura de dados de \emph{input} é efectuada usando um buffer ao qual vamos 
+buscar os \emph{tokens} a serem lidos. Se for efectuado um \emph{Read} e não 
+existir nada no \emph{buffer} fica à espera de dados no \emph{stdin}. Quando 
+existe um \emph{ReadLn} o comportamento é igual sendo que no final o 
+\emph{buffer} é esvaziado.
 
 \subsubsection{CallProc}
 
-A chamada de um procedimento tem muitas semelhanças com a avaliação de um programa. Primeiro é avaliado o primeiro parâmetro do nó para obtermos o \emph{Closure} do procedimento. De seguida são percorridos os argumentos presentes no \emph{Closure} para se associar ao ambiente os parâmetros com o respectivo identificador. Depois são avaliados os blocos de declarações do procedimento e finalmente avalia-se o corpo do procedimento no ambiente resultante da avaliação dos blocos de declarações.
+A chamada de um procedimento tem muitas semelhanças com a avaliação de um 
+programa. Primeiro é avaliado o primeiro parâmetro do nó para obtermos o 
+\emph{Closure} do procedimento. De seguida são percorridos os argumentos 
+presentes no \emph{Closure} para se associar ao ambiente os parâmetros com o 
+respectivo identificador. Depois são avaliados os blocos de declarações do 
+procedimento e finalmente avalia-se o corpo do procedimento no ambiente 
+resultante da avaliação dos blocos de declarações.
 
 \subsubsection{CallFun}
 
-A chamada de uma função é muito semelhante à chamada de um procedimento. No caso da função antes de se avaliar o corpo da mesma é necessário associar, ao ambiente no qual este vai ser avaliado, uma variável com o identificador \emph{result} com o valor por omissão do tipo de retorno da função. Após a avaliação do corpo é necessário procurar no ambiente pelo valor da variável \emph{result} e devolver esse valor.
+A chamada de uma função é muito semelhante à chamada de um procedimento. No 
+caso da função antes de se avaliar o corpo da mesma é necessário associar, 
+ao ambiente no qual este vai ser avaliado, uma variável com o identificador 
+\emph{result} com o valor por omissão do tipo de retorno da função. Após a 
+avaliação do corpo é necessário procurar no ambiente pelo valor da variável 
+\emph{result} e devolver esse valor.
 
 \subsubsection{New}
 
-A criação de um novo objecto é simplesmente uma chamada à função geradora de objectos da \emph{class} pretendida que foi declarada no bloco de declarações.
+A criação de um novo objecto é simplesmente uma chamada à função geradora de 
+objectos da \emph{class} pretendida que foi declarada no bloco de declarações.
 
 \subsubsection{Desreferênciação implícita}
 
-A desreferênciação implícita é efectuada recorrendo ao parâmetro booleano da função de avaliação de expressões sendo este enviado para a função \emph{to\_result}. Se este for falso a função \emph{to\_result} desreferencia o valor recebido se este for uma referência senão a função retorna sempre o próprio valor em qualquer outro caso.
+A desreferênciação implícita é efectuada recorrendo ao parâmetro booleano da 
+função de avaliação de expressões sendo este enviado para a função 
+\emph{to\_result}. Se este for falso a função \emph{to\_result} desreferencia 
+o valor recebido se este for uma referência senão a função retorna sempre o 
+próprio valor em qualquer outro caso.
+
+\subsubsection{Vectores}
+
+A criação de vectores trata-se de avaliar as expressões correpondentes 
+a cada posição e guardar os seus valores num vector primitivo do \emph{OCaml}.
+No caso dum vector variável é criado um vector com o tamanho indicado e é 
+colocado em cada posição uma cópia variável do valor por omissão do tipo do 
+vector.
+Para avaliar o acesso a uma posição de um vector basta avaliar a expressão 
+correspondente ao índice e extrair o inteiro que deve resultar da sua avaliação 
+e usar a biblioteca \emph{Array} para aceder à posição do array desejada. Se o 
+índice se encontrar fora dos limites do vector é lançada a excepção 
+\emph{Index\_out\_of\_bounds}.
+
+\subsubsection{Registos}
+
+Para se criar um é necessário avaliar as expressões dos vários campos. Para 
+guardar o valor dos campos é usado um mapa de \emph{IVALUE}. No caso dum 
+registo variável é necessário guardar em cada campo uma cópia variável do valor 
+por omissão do tipo de cada campo.
+Para se aceder a um campo de um registo é necessário avaliar a expressão 
+correspondente ao registo e, usando o módulo \emph{RecordMap}, obter o valor 
+correspondente ao campo pretendido. Caso o campo não exista é lançada a 
+excepção \emph{Element\_not\_found\_in\_record}.
+
+\subsubsection{Passagem por valor}
+
+Sempre que exista uma chamada de uma função ou de um procedimento com 
+argumentos este devem ser passados por valor para que não seja possível 
+efectuar afectações sobre os valores dos parâmetros. Em relação ao valores 
+simples não é necessário fazer muita coisa, apenas é necessário remover o nó 
+\emph{RefValue} caso o valor seja variável. Quanto aos vectores e registos é 
+feita uma cópia integral dos mesmos sendo que se estes forem variáveis, ou 
+seja, se estiver dentro de um nó \emph {RefValue}, são removidos todos esses 
+nós na cópia resultante. 
 
 \vspace{\baselineskip}
 
-Algumas operações foram implementadas com base noutras usando \emph{syntactic sugar} para evitar o excessivo número de operações que têm de ser definidas.
+Algumas operações foram implementadas com base noutras usando \emph{syntactic 
+sugar} para evitar o excessivo número de operações que têm de ser definidas.
 
-%Como funciona, qual o seu resultado, quais as estruturas de dados que o suportam, etc.
+%Como funciona, qual o seu resultado, quais as estruturas de dados que o 
+%suportam, etc.
 \newpage
 \section{Compilador}
 
@@ -350,113 +498,433 @@ Algumas operações foram implementadas com base noutras usando \emph{syntactic 
 {
 \fontsize{9pt}{10}\selectfont
 \ttfamily
-$
+$$
 \begin{array}{lll}
+\textbf{ENV}:~(int~map \times int~ref)~list\\\\
 compile\_expr:			&ENV \times bool \times EXPR \rightarrow string~list\\
 compile\_stat:			&ENV \times STAT \rightarrow string~list\\
-compile\_oper:			&ENV \times	OPER \rightarrow string~list \times string~list \times ENV\\
-compile\_decl:			&ENV \times DECL\_BLOCK \rightarrow string~list \times string~list \times ENV\\
-compile\_all\_decls:	&DECL\_BLOCK \times DECL\_BLOCK \times DECL\_BLOCK \times \\
-						&DECL\_BLOCK \times ENV \rightarrow string~list \times string~list \times ENV\\
+compile\_oper:			&ENV \times	OPER \rightarrow string~list \times 
+														string~list \times ENV\\
+compile\_decl:			&ENV \times DECL\_BLOCK \rightarrow string~list \times 
+														string~list \times ENV\\
+compile\_all\_decls:	&DECL\_BLOCK \times DECL\_BLOCK \times DECL\_BLOCK 
+																	\times \\
+						&DECL\_BLOCK \times ENV \rightarrow string~list 
+												\times string~list \times ENV\\
 compile\_program:	&PROGRAM \rightarrow string~list\\
 \end{array}
-$
-}\\
+$$
+}
 
-O resultado da compilação de um programa é uma lista de \emph{strings} com as instruções \emph{CIL} para executar o programa. Nesta lista já vêm as declarações das funções e já vem optimizada sem operações de \emph{box} e \emph{unbox, ldobj} ao mesmo tipo seguidas.
+O resultado da compilação de um programa é uma lista de \emph{strings} com as 
+instruções \emph{CIL} para executar o programa. Nesta lista já vêm as 
+declarações das funções e já vem optimizada sem operações de \emph{box, unbox} 
+e \emph{ldobj} ao mesmo tipo seguidas.
 
 \subsection{Estruturas auxiliares}
 
-Para a compilação de um programa as estruturas auxiliares usadas são, para guardar a informação de quais os endereços associados a cada identificador e quantas declarações já houve em cada \emph{Stackframe}, uma lista de pares em que o primeiro campo é o mapa com o mapeamento entre os identificadores e qual o endereço que lhe foi atribuído e o segundo campo o número de identificadores mapeados, um mapa com o mapeamento entre os identificadores dos tipos definidos pelo utilizador e a que tipo correspondem, um contador para poder atribuir novos números a \emph{labels} necessárias para a execução de \emph{ifs} e \emph{whiles} em \emph{CIL} e finalmente uma lista de inteiros para guardar o número de variáveis locais criadas em cada função, procedimento ou classe.
+Para a compilação de um programa as estruturas auxiliares usadas são, para 
+guardar a informação de quais os endereços associados a cada identificador e 
+quantas declarações já houve em cada \emph{Stackframe}, uma lista de pares em 
+que o primeiro campo é o mapa com o mapeamento entre os identificadores e qual 
+o endereço que lhe foi atribuído e o segundo campo o número de identificadores 
+mapeados, um mapa com o mapeamento entre os identificadores dos tipos definidos 
+pelo utilizador e a que tipo correspondem, um contador para poder atribuir 
+novos números a \emph{labels} necessárias para a execução de \emph{ifs} e 
+\emph{whiles} em \emph{CIL} e finalmente uma lista de inteiros para guardar o 
+número de variáveis locais criadas em cada função, procedimento ou classe.
 
-Para a execução do programa em \emph{CIL} são usadas as seguintes classes em \emph{C}\#:\\
+Para a execução do programa em \emph{CIL} são usadas as seguintes classes em 
+\emph{C}\#:\\
 
 {
 \fontsize{9pt}{10}\selectfont
 \begin{tabular}{ll}
-\textbf{StackFrame:}	&Classe usada para guardar o \emph{static link} e os valores das constantes, \\
-						&variáveis e argumentos de uma função, procedimento ou classe. Esta classe \\
-					&tem o apontador para o \emph{static link} e dois vectores com os valores \\
+\textbf{StackFrame:}	&Classe usada para guardar o \emph{static link} e os 
+													valores das constantes, \\
+						&variáveis e argumentos de uma função, procedimento ou 
+														classe. Esta classe \\
+					&tem o apontador para o \emph{static link} e dois vectores 
+															com os valores \\
 					&dos argumentos e das declarações locais.\\
-%					&\textbf{InitArgs($nParams$)}:	&Método para inicializar na \emph{stackframe}\\
-%													&&o vector dos parâmetros.\\
-%					&\textbf{InitLocals($nLocals$)}:&Método para inicializar na \emph{stackframe}\\
-%													&&o vector das variáveis locais.\\
-%					&\textbf{Get($i$)}:				&Método para obter o valor guardado com o \\
-%													&& endereço $i$ no \emph{stackframe}\\
-%					&\textbf{Set($i$, $o$)}:		&Método para guardar no endereço $i$ do \\
-%													&& \emph{stackframe} o objecto $o$\\
 \hline
-\textbf{Closure:}	&Classe usada para representar um closure guardando o \emph{stackframe} de \\
-					&quando foi declarada a operação e o apontador para a declaração da função \\
+\textbf{Closure:}	&Classe usada para representar um closure guardando o 
+														\emph{stackframe} de \\
+					&quando foi declarada a operação e o apontador para a 
+														declaração da função \\
 					&em \emph{CIL}. \\
-%					&\textbf{GetSF()}:				&Método para obter o \emph{stackframe} da \emph{closure}\\
-%					&\textbf{GetFtn()}:				&Método para obter o apontador para a declaração da\\
-%													&& função\\
-%					&\textbf{SetClosure}:			&
 \hline
-\textbf{Cell:}		&Classe usada para representar uma célula, onde serão guardados os valores \\ 
-					&simples que sejam variáveis. O valor é guardado numa variável do tipo \emph{object}\\
+\textbf{Cell:}		&Classe usada para representar uma célula, onde serão 
+														guardados os valores \\ 
+					&simples que sejam variáveis. O valor é guardado numa 
+												variável do tipo \emph{object}\\
 \hline
-\textbf{Record:}	&Classe usada para representar um registo. Esta classe possiu um dicionário \\
-					&com entradas do tipo (\emph{string},\emph{object}) para guardar o mapeamento \\
-					&entre o nome dos campos e os seus valores. Esta classe possiu ainda um método \\
-					&para obter uma cópia constante caso seja um registo variável e um método para \\
-					&copiar o conteúdo do registo para outro registo fornecido como argumento.\\
+\textbf{Record:}	&Classe usada para representar um registo. Esta classe 
+														possiu um dicionário \\
+					&com entradas do tipo (\emph{string},\emph{object}) para 
+														guardar o mapeamento \\
+					&entre o nome dos campos e os seus valores. Esta classe 
+													possui ainda um método \\
+					&para obter uma cópia constante caso seja um registo 
+													variável e um método para \\
+					&copiar o conteúdo do registo para outro registo fornecido 
+															como argumento.\\
 \end{tabular}
 \newpage
 \begin{tabular}{ll}
-\textbf{Array:}		&Classe usada para representar um vector. Esta classe possiu um vector de \\
-					&objectos para guardar os valores do vector. Tal como a classe \emph{Record} \\
-					&esta classe também tem um método para obter uma cópia constante e outro \\
-					&método para copiar o seu conteúdo para outro vector passado como argumento. \\
-					&É também possível inicializar o vector com $n$ posições e passando, \\
-					&opcionalmente, o valor por omissão a colocar em todas as posições.\\
+\textbf{Array:}		&Classe usada para representar um vector. Esta classe 
+														possiu um vector de \\
+					&objectos para guardar os valores do vector. Tal como a	 
+														classe \emph{Record} \\
+					&esta classe também tem um método para obter uma cópia 
+															constante e outro \\
+					&método para copiar o seu conteúdo para outro vector passado 
+															como argumento. \\
+					&É também possível inicializar o vector com $n$ posições 
+																e passando, \\
+					&opcionalmente, o valor por omissão a colocar em todas as 
+																	posições.\\
 \hline
-\textbf{Reader:}	&Classe usada para auxiliar com a leitura de valores do \emph{stdin}. \\
-					&Esta classe contém um \emph{buffer} para guardar uma linha lida do \emph{stdin} \\
-					&e um contador para saber quantos \emph{tokens} já foram lidos. \\
-					&Possui métodos para ler inteiros, booleanos e \emph{strings} do \emph{stdin} \\
-					& e um método para ler uma linha que basicamente esvazia o \emph{buffer}.\\
+\textbf{Reader:}	&Classe usada para auxiliar com a leitura de valores do 
+																\emph{stdin}. \\
+					&Esta classe contém um \emph{buffer} para guardar uma linha 
+														lida do \emph{stdin} \\
+					&e um contador para saber quantos \emph{tokens} já foram 
+																	lidos. \\
+					&Possui métodos para ler inteiros, booleanos e 
+											\emph{strings} do \emph{stdin} \\
+					& e um método para ler uma linha que basicamente esvazia o 
+																\emph{buffer}.\\
 \end{tabular}
 }
 
 \subsection{Como funciona}
 
-A compilação de um programa começa com a criação de um novo ambiente e começo de uma nova contagem de declarações locais. De seguida são compilados os blocos de declarações. No bloco de declaração de tipos é percorrida a lista das declarações e são adicionadas ao ambiente dos tipos a associação entre o identificador e o tipo a que corresponde. Na declaração de constantes são incrementadas as declarações locais e associados os identificadores a endereços novos no \emph{stackframe} actual. De seguida é compilada a expressão de cada constante juntamente com a compilação das instruções para colocar no \emph{StackFrame} a nova constante. A compilação das variáveis é semelhante à compilação de constantes sendo que em vez de compilar a expressão fornecida é compilado o valor por definição para cada variável. Quanto aos procedimentos, para a sua compilação é necessário obter um novo identificar para a operação, compilar o \emph{closure}, começar um novo ambiente, adicionar ao ambiente a ligação do nome a um endereço para poder haver recursividade e fazer um \emph{backup} do ambiente de tipos para ser restaurado depois de compilado o corpo do procedimento. Depois é ncessário atribuir a cada parâmetro um novo endereço e adicioná-lo ao ambiente, de seguida compilam-se os blocos de declarações e finalmente o corpo do procedimento. Por fim restaura-se o ambiente de tipos, termina-se o ambiente do procedimento e compilam-se as instruções para adicionar ao \emph{stackframe} o novo procedimento. Para as funções o processo é parecido com o procedimento sendo que antes de avaliar os blocos de declarações é necessário adicionar ao ambiente uma variável \emph{result} com o tipo de retorno da função. Após se compilar o corpo da função é necessário compilar as intruções para se obter o resultado da função e colocá-lo na pilha. Quanto às classes a técnica usada é igual à do interpretador sendo no final chamada a compilação da função criada.
-Após compilar os blocos de declaração resta compilar o corpo do programa e no final optimizar o programa compilado percorrendo todas as instruções geradas e removendo \emph{box, unbox} e \emph{ldobj} ao mesmo tipo seguidos.
+A compilação de um programa começa com a criação de um novo ambiente e começo 
+de uma nova contagem de declarações locais. De seguida são compilados os blocos 
+de declarações. No bloco de declaração de tipos é percorrida a lista das 
+declarações e são adicionadas ao ambiente dos tipos a associação entre o 
+identificador e o tipo a que corresponde. Na declaração de constantes são 
+incrementadas as declarações locais e associados os identificadores a endereços 
+novos no \emph{stackframe} actual. De seguida é compilada a expressão de cada 
+constante juntamente com a compilação das instruções para colocar no 
+\emph{StackFrame} a nova constante. A compilação das variáveis é semelhante à 
+compilação de constantes sendo que em vez de compilar a expressão fornecida é 
+compilado o valor por definição para cada variável. Quanto aos procedimentos, 
+para a sua compilação é necessário obter um novo identificar para a operação, 
+compilar o \emph{closure}, começar um novo ambiente, adicionar ao ambiente a 
+ligação do nome a um endereço para poder haver recursividade e fazer um 
+\emph{backup} do ambiente de tipos para ser restaurado depois de compilado o 
+corpo do procedimento. Depois é ncessário atribuir a cada parâmetro um novo 
+endereço e adicioná-lo ao ambiente, de seguida compilam-se os blocos de 
+declarações e finalmente o corpo do procedimento. Por fim restaura-se o 
+ambiente de tipos, termina-se o ambiente do procedimento e compilam-se as 
+instruções para adicionar ao \emph{stackframe} o novo procedimento. Para as 
+funções o processo é parecido com o procedimento sendo que antes de avaliar os 
+blocos de declarações é necessário adicionar ao ambiente uma variável 
+\emph{result} com o tipo de retorno da função. Após se compilar o corpo da 
+função é necessário compilar as intruções para se obter o resultado da função 
+e colocá-lo na pilha. Quanto às classes a técnica usada é igual à do 
+interpretador sendo no final chamada a compilação da função criada.
+Após compilar os blocos de declaração resta compilar o corpo do programa e no 
+final optimizar o programa compilado percorrendo todas as instruções geradas e 
+removendo \emph{box, unbox} e \emph{ldobj} ao mesmo tipo seguidos.
 
 \newpage
 As compilações mais complicadas são explicadas de seguida:
 
 \subsubsection{Assign}
 
-Para se compilar uma afectação é necessário recorrer às anotações deixadas pelo verificador de tipo para se saber qual o tipo que se está a afectar. Mediante o tipo que está no nó, e à excepção dos tipos simples em que apenas é necessário fazer um \emph{Set} à célula que representará o lado esquerdo da afectação, trocam-se os objectos no topo da pilha e chama-se o método \emph{CopyTo} da classe respectiva ao tipo das expressões da afectação.
+Para se compilar uma afectação é necessário recorrer às anotações deixadas pelo 
+verificador de tipo para se saber qual o tipo que se está a afectar. Mediante o 
+tipo que está no nó, e à excepção dos tipos simples em que apenas é necessário 
+fazer um \emph{Set} à célula que representará o lado esquerdo da afectação, 
+trocam-se os objectos no topo da pilha e chama-se o método \emph{CopyTo} da 
+classe respectiva ao tipo das expressões da afectação.
 
 \subsubsection{Read}
 
-A compilação do \emph{Read} é auxiliada pela classe \emph{Reader} da qual é chamado o método correspondente para ler um valor do tipo que foi anotado na verificação de tipos. No caso de um \emph{ReadLn} basta no final chamar o método \emph{ReadLine} do \emph{Reader} para esvaziar o \emph{buffer}.
+A compilação do \emph{Read} é auxiliada pela classe \emph{Reader} da qual é 
+chamado o método correspondente para ler um valor do tipo que foi anotado na 
+verificação de tipos. No caso de um \emph{ReadLn} basta no final chamar o 
+método \emph{ReadLine} do \emph{Reader} para esvaziar o \emph{buffer}.
 
 \subsubsection{CallProc}
 
-O processo de compilar um procedimento começa por se compilar a expressão correspondente à obtenção do \emph{closure} do procedimento. De seguida é compilada a lista de argumentos do procedimento sendo que no fim de cada um é efectuada a afectação no \emph{stackframe} ao endereço que foi atribuído aquando da compilação da declaração do procedimento. Por fim é compilada a chamada ao procedimento obtendo o \emph{stackframe} actual, criando um novo, iniciando os argumentos do procedimento e colocando-os na \emph{stackframe} e finalmente obtendo-se o apontador para o procedimento que está no \emph{Closure} e compilando a instrução \emph{CIL} de chamada de um procedimento.
+O processo de compilar a chamada a um procedimento começa por se compilar a 
+expressão correspondente à obtenção do \emph{closure} do procedimento. De 
+seguida é compilada a lista de argumentos do procedimento sendo que no fim de 
+cada um é efectuada a afectação no \emph{stackframe} ao endereço que foi 
+atribuído aquando da compilação da declaração do procedimento. Por fim é 
+compilada a chamada ao procedimento obtendo o \emph{stackframe} actual, criando 
+um novo, iniciando os argumentos do procedimento e colocando-os na 
+\emph{stackframe} e finalmente obtendo-se o apontador para o procedimento que 
+está no \emph{Closure} e compilando a instrução \emph{CIL} de chamada de um 
+procedimento.
 
 \subsubsection{CallFun}
 
-A compilação da chamada de uma função é igual à chamada de um procedimento visto que, ao contrário do interpretador, não é necessário adicionar ao ambiente a variável \emph{self} nem compilar as instruções para a colocar no topo da pilha como retorno da função porque a adição e a compilação da sua obtenção já foram efectuadas aquando da declaração da função.
+A compilação da chamada de uma função é igual à chamada de um procedimento 
+visto que, ao contrário do interpretador, não é necessário adicionar ao 
+ambiente a variável \emph{self} nem compilar as instruções para a colocar no 
+topo da pilha como retorno da função porque a adição e a compilação da sua 
+obtenção já foram efectuadas aquando da declaração da função.
 
-% Como funciona, qual o resultado (quais as traducoes de cada construcao da linguagem), quais as estruturas que suportam a compilacao e a execucao dos programas compilados?
+\subsubsection{Desreferênciação implícita}
+
+A desreferênciação é feita usando o método usado no interpretador. Se for 
+necessário desreferenciar uma variável apenas se tem de verificar se o tipo 
+desta é guardado numa célula e caso o seja chamar o método \emph{GetValue} da 
+class \emph{Cell}.
+
+\subsubsection{Vectores}
+
+Os vectores foram implementados recorrendo à classe auxiliar \emph{Array}.
+A compilação de um vector constante é feita chamando o construtor da classe 
+\emph{Array} que apenas recebe o tamanho do vector como argumento enquanto que 
+o constructor que recebe o valor por omissão é usado quando se cria um vector 
+variável. Isto deve-se ao facto de quando se declara um vector constante é 
+necessário especificar qual o valor de cada posição logo não faz sentido 
+inicializar cada posição com um valor para, logo de seguida, ser alterado. 
+A construção do vector é muito semelhante ao interpretador, compilam-se as 
+instruções correspondentes a cada posição do vector juntando-se a chamada ao 
+método \emph{Set} da classe \emph{Array} empilhando-se os respectivos 
+argumentos.
+Para se compilar o acesso a uma posição de um vector é necessário compilar a 
+expressão que denota o vector ao qual se pretende aceder, a expressão 
+correspondente ao índice pretendido e no final, se necessário, adicionar a 
+chamada ao método \emph{Get} da classe \emph{Cell} para se efectuar a 
+desreferênciação da posição do vector. No caso da posição que se pretende obter 
+não estiver nos limites do vector é lançada a excepção 
+\emph{System.IndexOutOfRangeException} lançada pelo \emph{C}\#.
+
+\subsubsection{Registos}
+
+Os registos são implementados recorrendo à classe auxiliar \emph{Record}.
+Para se compilar a criação de um registo é chamado o contructor da classe 
+\emph{Record} para criar um novo registo. De seguida são geradas as intruções 
+para cada expressão juntamente com o empilhamento do nome do campo e da chamada 
+ao método \emph{SetValue} da classe \emph{Record}. Para a criação de um registo 
+variavél não é necessário existir um constructor com valores por omissão porque 
+é necessário especificar os tipos de todos os campos logo pode-se colocar em 
+cada campo o valor por omissão para o tipo indicado.
+No acesso ao campo de um registo é compilada a expressão correspondente ao 
+registo, o empilhamento do nome do campo que se pretende aceder e a chamada 
+ao método \emph{GetValue} da class \emph{Record}.
+No casos dos registos nunca existe o acesso a um campo não existente porque 
+essa verificação é efetuada pelo verificador de tipos.
+
+\subsubsection{Passagem por valor}
+
+Para se compilar a passagem de argumentos por valor é necessário recorrer às 
+classes \emph{C}\# para se efectuar a cópia constante dos vários argumentos.
+Ao compilar-se a chamada de a uma função ou procedimento é chamado o método 
+\emph{GetConstCopy} da classe do tipo do argumento caso este seja um vector ou 
+um registo variáveis. Na cópia dos valores serão removidos todos os objectos 
+\emph{Cell} colocando no seu lugar o valor que guardam.
+
+% Como funciona, qual o resultado (quais as traducoes de cada construcao da 
+%linguagem), quais as estruturas que suportam a compilacao e a execucao dos 
+%programas compilados?
 \newpage
 \section{Sistema de tipos}
 
-O resultado devolvido pelo verificador de tipos é o nó que é passado como parâmetro sendo que este vem tipificado, bem como todos os nós que fazem parte da árvore abstracta.
+\subsection{Resultado}
+{
+\fontsize{9pt}{10}\selectfont
+\ttfamily
+$$
+\begin{array}{lll}
+\textbf{ENV}:~ITYPE~map\\\\
+typechk\_exp:			&ENV \times EXPR \rightarrow EXPR\\
+typechk\_stat:			&ENV \times STAT \rightarrow STAT\\
+typechk\_oper:			&ENV \times	OPER \rightarrow string \times OPER \times 
+																		ENV\\
+typechk\_decl:			&ENV \times DECL\_BLOCK \rightarrow string~list \times 
+														DECL\_BLOCK \times ENV\\
+typechk\_all\_decls:	&ENV \times DECL\_BLOCK \times DECL\_BLOCK \times 
+														DECL\_BLOCK \times \\
+						&DECL\_BLOCK \rightarrow DECL\_BLOCK~list \times ENV 
+																\times ITYPE\\
+typechk\_program:		&PROGRAM \rightarrow PROGRAM\\
+\end{array}
+$$
+}\\
 
-A estrutura de dados utilizada para auxiliar o verificador de tipos é um mapa que representa o ambiente em que se está a tipificar o nó, sendo que este ambiente é passado para todas quase todas as funções do verificador de tipos. Neste ambiente é guardada a informação sobre o tipo dos identificadores declarados e ainda, como extra, para guardar o tipo que é representado pelo identificador que foi declarado na zona de declaração de tipos. Esta estrutura é utilizada quando se pretende tipificar o nó \emph{\textbf{Id}} e quando se está a fazer uma comparação de tipos para o caso em que encontramos um identificador de um tipo declarado.
+O resultado devolvido pelo verificador de tipos é o nó que é passado como 
+parâmetro sendo que este vem tipificado, bem como todos os nós que fazem parte 
+da árvore abstracta.
 
-A tipificação de expressões simples (\emph{\textbf{Add}}, \emph{\textbf{Sub}}, etc.) é efectuada verificando o tipo do nó da esquerda e do nó da direita, ou do único nó no caso de operações unárias, e testanto se os nós têm o mesmo tipo e se é possível efectuar a operação sobre esse tipo. Caso a operação seja válida é retornado nó com o tipo correspondente ao retorno da operação, caso contrário, é retornado o nó com o tipo \emph{TNone} e com uma mensagem de erro associada.
+\subsection{Estruturas auxiliares}
 
+A estrutura de dados utilizada para auxiliar o verificador de tipos é um mapa 
+que representa o ambiente em que se está a tipificar o nó, sendo que este 
+ambiente é passado para todas quase todas as funções do verificador de tipos. 
+Neste ambiente é guardada a informação sobre o tipo dos identificadores 
+declarados e ainda, como extra, para guardar o tipo que é representado pelo 
+identificador que foi declarado na zona de declaração de tipos. Esta estrutura 
+é utilizada quando se pretende tipificar o nó \emph{\textbf{Id}} e quando se 
+está a fazer uma comparação de tipos para o caso em que encontramos um 
+identificador de um tipo declarado.
 
-equals
+\subsection{Como funciona}
 
+O verificador de tipos começa por tipificar os vários blocos de declarações 
+presentes num programa. A função que tipifica um bloco de declarações devolve 
+uma lista com todos os identificadores declarados em cada bloco para que, após 
+a tipificação de todos os blocos seja chamada a função que verifica se existem 
+nomes duplicados. Caso existam identificadores repetidos é lançada uma 
+excepção. Primeiro tipifica-se a declaração de tipos que apenas adiciona ao 
+ambiente a associação entre o identificador e o tipo que representa para se 
+utilizar quando se efectua a comparação entre tipos e um deles foi declarado 
+pelo utilizador. De seguida são tipificadas as declarações de constantes. Para 
+isso é necessário tipificar cada expressão e associar, no ambiente, o seu tipo 
+ao identificador dado. Depois vem a tipificação de variáveis que também apenas 
+associa no ambiente uma referência para o tipo indicado ao indentificador 
+fornecido. De seguida vêm as operações e as classes. Nas operações o 
+procedimento é muito semalhante. É necessário adicionar ao ambiente os 
+argumentos com os tipos respectivos, depois adicionar a associação entre o nome 
+da operação e o seu tipo para que possa existir funções recursivas e no caso 
+das funções adicionar a ssociação entre a variável \emph{result} e o tipo de 
+retorno da função. De seguida tipificam-se os blocos de declarações e depois, 
+no ambiente devolvido, tipifica-se o corpo da operação. Finalmente verifica-se 
+se nenhum nó está tipificado com \emph{TNone} e devolve-se o nome da operação, 
+o nó tipificado e o ambiente actualizado. No caso das classes o procedimento é 
+igual ao das operações sendo que é precedido pelo varrimento da classe para 
+obter uma lista dos métodos declarados para se puder construir o tipo da classe.
 
-% Como funciona, qual o seu resultado, quais as estruturas de dados que o suportam, etc.
+Após a tipificação dos blocos de declarações tipifica-se o corpo do programa. 
+Para se tipificar o corpo recorre-se várias vezes ao método \emph{equals} que 
+verifica se dois tipo são iguais ignorando se têm \emph{TRef} ou não.
+
+\subsubsection{Equals}
+
+{
+\noindent$
+\fontsize{9pt}{10}\selectfont
+\textbf{ENV:}~ITYPE~map
+$
+
+\noindent$
+\textbf{Equals:}~ENV \times (ITYPE \times ITYPE)~list \times ITYPE \times 
+														ITYPE \rightarrow bool
+$
+}
+
+A função \emph{equals} recebe um ambiente, que é onde estão declarados os tipo 
+definidos pelo utilizador para que seja possível expandir sempre que 
+necessário, e uma lista de tipos já comparados que serve para evitar a que se 
+entre num ciclo infinito ao compararem-se dois tipos recursivos. Na função 
+começa-se por se verificar se os dois tipo não foram já comparados usando a 
+lista fornecida como argumento. Se já foram devolve-se \emph{true} porque 
+significa que correu tudo bem durante a expansão e comparação dos tipo e 
+voltámos ao mesmo ponto através da recursividade de tipos. Caso contrário, 
+adiciona-se o par de tipos a lista e comparam-se os mesmos. Caso sejam tipos 
+simples a comparação é trivial e basta devolver o resultado da comparação 
+primitiva do \emph{OCaml}. No caso dos vectores e dos registo a comparação é 
+feita chamando recursivamente a função para cada posição ou campo. Nas 
+operações a igualdade verifica-se quando os tipos dos argumentos são iguais. 
+Quanto aos objectos existe o caso em que é declarado um nome à cabeça do tipo 
+para representar o próprio objecto pelo que esta associação é adicionada ao 
+ambiente e são então comparados todos os métodos dos dois objectos comparando 
+nome, o retorno e os argumentos dos métodos. Finalmente, em relação aos tipos 
+definidos pelo utilizador, quando se encontra um identificador destes 
+procura-se no ambiente o tipo que representa e chama-se novamente a comparação 
+com o novo tipo.
+
+\subsubsection{Assign}
+
+A tipificação de uma afectação começa por tipificar ambas as expressões 
+e de seguida verifica se a expressão do lado esquerdo resulta num \emph{TRef} 
+e caso o seja compara-se se os dois tipos são iguais. 
+
+Caso alguma verificação falhe durante a verificação é retornado o nó com o 
+\emph{TNone}.
+
+\subsubsection{Read}
+
+Para se tipificar um nó \emph{Read} é necessário verificar se todos os tipos 
+dos valores que se pretendem ler são tipo simples porque estes são os únicos 
+que podem ser lidos. Para auxiliar no compilador é criada uma lista com os 
+tipos das variáveis que se pretendem ler.
+
+\subsubsection{CallProc e CallFun}
+
+A tipificação da chamada de uma função ou procedimento consiste apenas na 
+verificação se a tipificação da expressão que denota a operação resulta num 
+\emph{closure} válido consoante se está chamar um procedimento ou uma função. 
+Caso o \emph{closure} seja válido é verificado se os tipos das expressões que 
+se pretendem passar como argumentos coincidem com os tipos dos argumentos da 
+operação que está a ser chamada.
+
+\subsubsection{New}
+
+Na tipificação da construção de um novo objecto é apenas necessário verificar 
+se a expressão denota uma classe válida e caso o seja tipificar o nó \emph{New} 
+com o tipo do objecto que instancia a classe indicada.
+
+\subsubsection{Desreferênciação implícita}
+
+Na verificação de tipos a desreferênciação implícita é efectuada quando se 
+pretende usar o valor da expressão por isso não é necessário ter o parâmetro 
+booleano na tipificação de expressões. Para desreferenciar uma expressão quando 
+necessário é usada a função \emph{unref\_iType} que apenas verifica se o tipo 
+passado como argumento é um \emph{TRef} e, caso o seja, devolve o tipo que está 
+dentro do \emph{TRef}, caso contrário devolve o próprio tipo.
+
+\subsubsection{Vectores}
+
+Na criação de um vector constante é necessário verificar se todas as expressões 
+que representam os vários valores do vector têm o mesmo tipo. Para tal é 
+percorrida a lista de expressões fornecida, são tipificados todos os seus nós e 
+contadas quantas expressões são para se saber qual o tamanho do vector. Se 
+todos os tipos coincidirem é então tipificada a expressão com o tipo 
+\emph{TArray} com o tamanho obtido da contagem de expressões e o tipo dos 
+vários elementos. Caso alguma verificação falhe o tipo do vector fica como 
+\emph{TNone}.
+
+\subsubsection{Registos}
+
+A tipificação da criação de um registo consiste simplesmente em percorrer todas 
+as expressões dos campos e verificar que estão bem tipificadas. Durante este 
+processo é necessário guardar uma lista com todos os tipos para se criar no 
+final o tipo do registo. No acesso a um campo de um registo apenas é 
+necessário verificar que a tipificação da primeira expressão tem tipo 
+\emph{TRecord} e procurar na lista de campos pelo campo que pretendido e 
+devolver o seu tipo.
+
+\subsubsection{Passagem por valor}
+
+A passagem de argumentos por valor não é tipificada porque quando se avalia o 
+corpo de uma função nou procedimento os nomes dos parâmetros são associados 
+como constantes não permitindo a sua afectação logo na chamada apenas é 
+necessário verificar que os tipos coincidem ignorando os nós \emph{TRef}.
+
+\subsubsection{Classes e Objectos}
+
+Com a introdução de objectos apenas foi necessário introduzir o caso de, no 
+acesso a um registo, a expressão denotar um objecto pelo que o procedimento é 
+igual, basta ir à lista de métodos do nó \emph{TObject} e devolver o tipo do 
+método.
+
+\subsubsection{Definição de tipos}
+
+A definição de foi implementada adicionando ao ambiente de tipo a associação 
+entre o nome do tipo e o tipo que representa. Quando é encontrado um 
+identificador de um tipo que foi definido pelo utilizador apenas é subtituído 
+pelo tipo que representa e é verificado novamente com o tipo correcto.
+
+\subsubsection{Operações permitidas}
+{
+\ttfamily
+\begin{tabular}{ll}
+\textbf{Add, Eq, Neq:}										&\emph{strings} e 
+																		inteiros
+\\
+\textbf{Sub, Mult, Div, Mod, Compl, Gt, Lt, Gteq, Lteq:}	&inteiros
+\\
+\textbf{And, Or, Not:}										&booleanos
+\end{tabular}
+}
+% Como funciona, qual o seu resultado, quais as estruturas de dados que o 
+%suportam, etc.
