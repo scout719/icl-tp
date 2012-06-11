@@ -1,18 +1,14 @@
 \chapter{Descrição}
-
 O trabalho foi desenvolvido de forma a que apenas exista um ficheiro executável 
 sendo que é passado para este uma flag indicando se é para interpretar ou 
-compilar o código fonte fornecido. O código pode ser fornecido tanto através do 
-caminho para o ficheiro, indicando a seguir à flag qual é, e, caso não esteja 
-presente, o programa fica à espera que seja introduzido no \emph{stdin} o 
-código fonte. O trabalho foi dividido em módulos de forma a permitir uma fácil 
-manutenção do código. 
+compilar o código fonte fornecido. O código pode ser fornecido através do 
+caminho para o ficheiro, indicando a seguir à flag qual é, ou, caso seja 
+fornecido nenhum caminho, o programa fica à espera que seja introduzido no 
+\emph{stdin} o código fonte. O trabalho foi dividido em módulos de forma a 
+permitir uma fácil manutenção do código. 
 Para tal foram gerados os seguintes módulos:
 
 \begin{tabular}{|l|l|}
-\hline
-\multicolumn{2}{|l|}{\cellcolor{grey}Módulos}
-\\
 \hline
 $main.ml:$				& Módulo principal para executar o programa 
 \\
@@ -66,7 +62,7 @@ verificador de tipos que verifica se o programa está semanticamente correcto e
 caso não esteja imprime uma mensagem de erro. Caso o programa passe na 
 verificação de tipos é então, no caso do interpretador, avaliado o programa e 
 impresso no \emph{stdin} o resultado da avaliação, e no caso do compilador, 
-compilado o programa as impressas no \emph{stdin} as instruções \emph{CIL} 
+compilado o programa e impressas no \emph{stdin} as instruções \emph{CIL} 
 geradas. 
 
 %Qual a arquitectura da soluçãoo (como se divide a implementação do trabalho em
